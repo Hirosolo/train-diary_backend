@@ -14,24 +14,28 @@ export async function POST(req: Request) {
   const { email, password } = await req.json()
 
   if (!email || !password) {
-    return NextResponse.json({ message: 'Email and password required.' }, { status: 400 })
+    
+    const message = "Email and password required."
+    return NextResponse.json({ message }, { status: 400 })
   }
 
   // Get user from Supabase
   const { data: user, error } = await supabase
     .from('users')
-    .select('id, username, email, password_hash')
+    .select('*')
     .eq('email', email)
     .single()
 
   if (error || !user) {
-    return NextResponse.json({ message: 'Invalid credentials.' }, { status: 401 })
+    const message = "User not found. "
+    return NextResponse.json({ message }, { status: 401 })
   }
-
+ 
   // Check password
   const match = await bcrypt.compare(password, user.password_hash)
   if (!match) {
-    return NextResponse.json({ message: 'Invalid credentials.' }, { status: 401 })
+    const message = 'Invalid credentials.'
+    return NextResponse.json({ message }, { status: 401 })
   }
 
   // Create JWT token
