@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server'
 import { supabase } from 'lib/supabaseClient'
 
-// Create a new meal (with optional food details)
+// Define type for food input
+interface FoodInput {
+  food_id: number
+  amount_grams: number
+}
+
 export async function POST(req: Request) {
-  const { user_id, meal_type, log_date, foods } = await req.json()
-  // foods: [{ food_id, amount_grams }]
+  const { user_id, meal_type, log_date, foods }: {
+    user_id: number
+    meal_type: string
+    log_date: string
+    foods?: FoodInput[]
+  } = await req.json()
 
   if (!user_id || !meal_type || !log_date) {
     return NextResponse.json(
@@ -29,7 +38,7 @@ export async function POST(req: Request) {
 
   // If foods array provided, insert meal details
   if (Array.isArray(foods) && foods.length > 0) {
-    const details = foods.map((f: any) => ({
+    const details = foods.map((f) => ({
       meal_id: meal.meal_id,
       food_id: f.food_id,
       amount_grams: f.amount_grams,
@@ -55,13 +64,15 @@ export async function POST(req: Request) {
   )
 }
 
-// Get all meals (optionally filtered by user_id and/or date)
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const user_id = searchParams.get('user_id')
   const log_date = searchParams.get('log_date')
 
-  let query = supabase.from('user_meals').select('*').order('log_date', { ascending: false })
+  let query = supabase
+    .from('user_meals')
+    .select('*')
+    .order('log_date', { ascending: false })
 
   if (user_id) query = query.eq('user_id', user_id)
   if (log_date) query = query.eq('log_date', log_date)
