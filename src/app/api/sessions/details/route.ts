@@ -1,16 +1,26 @@
 import { NextResponse } from 'next/server'
 import { supabase } from 'lib/supabaseClient'
 
-// Add exercises to session
+interface ExerciseInput {
+  exercise_id: number
+  planned_sets: number
+  planned_reps: number
+}
+
 export async function POST(req: Request) {
   const { searchParams } = new URL(req.url)
   const sessionId = Number(searchParams.get('session_id'))
-  const { exercises } = await req.json()
 
-  if (!sessionId || !Array.isArray(exercises) || exercises.length === 0)
-    return NextResponse.json({ message: 'session_id and exercises required.' }, { status: 400 })
+  const { exercises }: { exercises: ExerciseInput[] } = await req.json()
 
-  const formatted = exercises.map((ex: any) => ({
+  if (!sessionId || !Array.isArray(exercises) || exercises.length === 0) {
+    return NextResponse.json(
+      { message: 'session_id and exercises required.' },
+      { status: 400 }
+    )
+  }
+
+  const formatted = exercises.map((ex) => ({
     session_id: sessionId,
     exercise_id: ex.exercise_id,
     planned_sets: ex.planned_sets,
@@ -18,8 +28,13 @@ export async function POST(req: Request) {
   }))
 
   const { error } = await supabase.from('session_details').insert(formatted)
-  if (error)
-    return NextResponse.json({ message: 'Failed to add exercises.', error: error.message }, { status: 500 })
+
+  if (error) {
+    return NextResponse.json(
+      { message: 'Failed to add exercises.', error: error.message },
+      { status: 500 }
+    )
+  }
 
   return NextResponse.json({ message: 'Exercises added.' }, { status: 201 })
 }
@@ -29,8 +44,12 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const sessionId = Number(searchParams.get('session_id'))
 
-  if (!sessionId)
-    return NextResponse.json({ message: 'session_id required.' }, { status: 400 })
+  if (!sessionId) {
+    return NextResponse.json(
+      { message: 'session_id required.' },
+      { status: 400 }
+    )
+  }
 
   const { data, error } = await supabase
     .from('session_details')
@@ -47,8 +66,12 @@ export async function GET(req: Request) {
     `)
     .eq('session_id', sessionId)
 
-  if (error)
-    return NextResponse.json({ message: 'Failed to fetch details.', error: error.message }, { status: 500 })
+  if (error) {
+    return NextResponse.json(
+      { message: 'Failed to fetch details.', error: error.message },
+      { status: 500 }
+    )
+  }
 
   return NextResponse.json(data, { status: 200 })
 }
