@@ -100,8 +100,8 @@ export async function GET() {
         'Content-Type': 'text/html',
       },
     });
-  } catch (error: any) {
-    const errorMessage = error?.message || 'Unknown error occurred';
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error('Error generating Swagger UI:', error);
     return NextResponse.json({ error: `Failed to generate API documentation: ${errorMessage}` }, { status: 500 });
   }
