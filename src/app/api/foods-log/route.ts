@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server'
 import { supabase } from 'lib/supabaseClient'
+interface MealDetailsEntry {
+  meal_id: string
+  food_id: string
+  amount_grams: number
+}
 
 // POST - Create a meal log
 export async function POST(req: Request) {
@@ -18,7 +23,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: 'Failed to log meal.', error: mealError?.message }, { status: 500 })
   }
 
-  const mealDetails = foods.map((f: any) => ({
+  const mealDetails = foods.map((f: MealDetailsEntry) => ({
     meal_id: meal.meal_id,
     food_id: f.food_id,
     amount_grams: f.amount_grams,
