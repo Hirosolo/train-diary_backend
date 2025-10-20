@@ -1,6 +1,48 @@
 import { NextResponse } from 'next/server'
 import { supabase } from 'lib/supabaseClient'
 
+/**
+ * @swagger
+ * /api/foods:
+ *   get:
+ *     summary: Get all foods
+ *     description: Retrieve all food items from the database.
+ *     tags:
+ *       - Foods
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved list of foods.
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               food_id:
+ *                 type: string
+ *                 example: "1"
+ *               name:
+ *                 type: string
+ *                 example: "Grilled Chicken Breast"
+ *               calories:
+ *                 type: number
+ *                 example: 165
+ *               protein:
+ *                 type: number
+ *                 example: 31
+ *               carbs:
+ *                 type: number
+ *                 example: 0
+ *               fat:
+ *                 type: number
+ *                 example: 3.6
+ *               description:
+ *                 type: string
+ *                 example: "A lean source of protein commonly used in meal plans."
+ *       500:
+ *         description: Failed to fetch foods.
+ */
+
+
 // Add new food
 export async function POST(req: Request) {
   const {
