@@ -17,9 +17,9 @@ const options = {
     ],
   },
   apis: [
-    './src/app/api/auth/login/route.ts',
-    './src/app/api/auth/register/route.ts',
-    './src/app/api/**/route.ts'
+    process.cwd() + '/src/app/api/auth/login/route.ts',
+    process.cwd() + '/src/app/api/auth/register/route.ts',
+    process.cwd() + '/src/app/api/**/route.ts'
   ],
 };
 
