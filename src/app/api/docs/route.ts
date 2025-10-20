@@ -1,32 +1,70 @@
 import { NextResponse } from 'next/server';
 
-import swaggerJsdoc from 'swagger-jsdoc';
-
-const options = {
-  definition: {
-    swagger: '2.0',
-    info: {
-      title: 'Train Diary API',
-      version: '1.0.0',
-      description: 'API documentation for Train Diary application',
-    },
-    servers: [
-      {
-        url: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
-        description: 'API Server',
-      },
-    ],
+const spec = {
+  swagger: '2.0',
+  info: {
+    title: 'Train Diary API',
+    version: '1.0.0',
+    description: 'API documentation for Train Diary application',
   },
-  apis: [
-    process.cwd() + '/src/app/api/auth/login/route.ts',
-    process.cwd() + '/src/app/api/auth/register/route.ts',
-    process.cwd() + '/src/app/api/**/route.ts'
-  ],
+  host: process.env.NEXT_PUBLIC_API_URL?.replace(/^https?:\/\//, '') || 'localhost:3000',
+  basePath: '/api',
+  schemes: ['http', 'https'],
+  paths: {
+    '/auth/login': {
+      post: {
+        tags: ['Authentication'],
+        summary: 'User login',
+        parameters: [
+          {
+            in: 'body',
+            name: 'body',
+            required: true,
+            schema: {
+              type: 'object',
+              properties: {
+                email: { type: 'string' },
+                password: { type: 'string' }
+              }
+            }
+          }
+        ],
+        responses: {
+          200: { description: 'Login successful' },
+          401: { description: 'Invalid credentials' }
+        }
+      }
+    },
+    '/auth/register': {
+      post: {
+        tags: ['Authentication'],
+        summary: 'User registration',
+        parameters: [
+          {
+            in: 'body',
+            name: 'body',
+            required: true,
+            schema: {
+              type: 'object',
+              properties: {
+                email: { type: 'string' },
+                password: { type: 'string' },
+                name: { type: 'string' }
+              }
+            }
+          }
+        ],
+        responses: {
+          201: { description: 'Registration successful' },
+          400: { description: 'Invalid input' }
+        }
+      }
+    }
+  }
 };
 
 export async function GET() {
   try {
-    const spec = swaggerJsdoc(options);
     
     const html = `
       <!DOCTYPE html>
@@ -62,8 +100,9 @@ export async function GET() {
         'Content-Type': 'text/html',
       },
     });
-  } catch (error) {
+  } catch (error: any) {
+    const errorMessage = error?.message || 'Unknown error occurred';
     console.error('Error generating Swagger UI:', error);
-    return NextResponse.json({ error: 'Failed to generate API documentation' }, { status: 500 });
+    return NextResponse.json({ error: `Failed to generate API documentation: ${errorMessage}` }, { status: 500 });
   }
 }
