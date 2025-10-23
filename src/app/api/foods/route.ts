@@ -1,14 +1,47 @@
 import { NextResponse } from 'next/server';
 import { supabase } from 'lib/supabaseClient';
 
-/**
- * Foods API (CRUD)
- * - GET: fetch all foods or one by ?food_id
- * - POST: create new food
- * - PUT: update existing food
- * - DELETE: remove a food
- */
+/** ---------- Type Definitions ---------- **/
 
+export interface Food {
+  food_id: number;
+  name: string;
+  calories_per_serving: number;
+  protein_per_serving: number;
+  carbs_per_serving: number;
+  fat_per_serving: number;
+  serving_type: string;
+  image?: string | null;
+}
+
+export interface CreateFoodRequest {
+  name: string;
+  calories_per_serving: number;
+  protein_per_serving: number;
+  carbs_per_serving: number;
+  fat_per_serving: number;
+  serving_type: string;
+  image?: string;
+}
+
+export interface UpdateFoodRequest {
+  food_id: number;
+  name?: string;
+  calories_per_serving?: number;
+  protein_per_serving?: number;
+  carbs_per_serving?: number;
+  fat_per_serving?: number;
+  serving_type?: string;
+  image?: string;
+}
+
+export interface DeleteFoodRequest {
+  food_id: number;
+}
+
+/** ---------- API Handlers ---------- **/
+
+// GET: fetch all foods or one by ?food_id
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -17,7 +50,9 @@ export async function GET(req: Request) {
     let query = supabase.from('foods').select('*');
     if (foodId) query = query.eq('food_id', foodId);
 
-    const { data, error } = await query.order('name', { ascending: true });
+    const { data, error } = await query
+      .order('name', { ascending: true })
+      .returns<Food[]>();
 
     if (error)
       return NextResponse.json({ error: 'Failed to fetch foods.' }, { status: 500 });
@@ -26,7 +61,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Food not found.' }, { status: 404 });
 
     return NextResponse.json(data, { status: 200 });
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { error: 'Unexpected error occurred while fetching foods.' },
       { status: 500 }
@@ -34,9 +69,10 @@ export async function GET(req: Request) {
   }
 }
 
+// POST: create a new food
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body: CreateFoodRequest = await req.json();
     const {
       name,
       calories_per_serving,
@@ -47,7 +83,6 @@ export async function POST(req: Request) {
       image,
     } = body;
 
-    // ✅ Validate required fields
     if (!name || !serving_type) {
       return NextResponse.json(
         { error: 'Missing required fields: name or serving_type.' },
@@ -68,20 +103,22 @@ export async function POST(req: Request) {
           image,
         },
       ])
-      .select();
+      .select()
+      .returns<Food[]>();
 
     if (error)
       return NextResponse.json({ error: 'Failed to add food.' }, { status: 500 });
 
+    const food = data?.[0];
     return NextResponse.json(
       {
-        food_id: data?.[0]?.food_id,
+        food_id: food.food_id,
         message: 'Food added successfully.',
-        data: data?.[0],
+        data: food,
       },
       { status: 201 }
     );
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { error: 'Unexpected error occurred while adding food.' },
       { status: 500 }
@@ -89,9 +126,10 @@ export async function POST(req: Request) {
   }
 }
 
+// PUT: update existing food
 export async function PUT(req: Request) {
   try {
-    const body = await req.json();
+    const body: UpdateFoodRequest = await req.json();
     const { food_id, ...updates } = body;
 
     if (!food_id)
@@ -104,7 +142,8 @@ export async function PUT(req: Request) {
       .from('foods')
       .update(updates)
       .eq('food_id', food_id)
-      .select();
+      .select()
+      .returns<Food[]>();
 
     if (error)
       return NextResponse.json({ error: 'Failed to update food.' }, { status: 500 });
@@ -119,7 +158,7 @@ export async function PUT(req: Request) {
       },
       { status: 200 }
     );
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { error: 'Unexpected error occurred while updating food.' },
       { status: 500 }
@@ -127,9 +166,10 @@ export async function PUT(req: Request) {
   }
 }
 
+// DELETE: remove a food
 export async function DELETE(req: Request) {
   try {
-    const body = await req.json();
+    const body: DeleteFoodRequest = await req.json();
     const { food_id } = body;
 
     if (!food_id)
@@ -138,7 +178,6 @@ export async function DELETE(req: Request) {
         { status: 400 }
       );
 
-    // Check if exists before delete
     const { data: existing } = await supabase
       .from('foods')
       .select('food_id')
@@ -157,7 +196,7 @@ export async function DELETE(req: Request) {
       { message: 'Food deleted successfully.' },
       { status: 200 }
     );
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { error: 'Unexpected error occurred while deleting food.' },
       { status: 500 }

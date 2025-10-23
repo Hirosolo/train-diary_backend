@@ -14,7 +14,8 @@ const spec = {
     { name: 'Authentication', description: 'Authentication endpoints' },
     { name: 'Exercises', description: 'Exercise management endpoints' },
     { name: 'Foods', description: 'Food management endpoints' },
-    { name: 'Food Logs', description: 'Food log (meal tracking) endpoints' }
+    { name: 'Food Logs', description: 'Food log (meal tracking) endpoints' },
+    { name: 'Workout Plans', description: 'Workout plan management endpoints' }
   ],
   paths: {
   // --- AUTHENTICATION ---
@@ -385,7 +386,153 @@ const spec = {
           500: { description: 'Failed to delete food log.' }
         }
       }
-    }
+    },
+
+    // --- WORKOUT PLANS ---
+        '/workout-plans': {
+      get: {
+        tags: ['Plans'],
+        summary: 'Get all workout plans or plan details by ID',
+        description:
+          'Retrieve all workout plans (with duration in days) or detailed information about a specific plan using the `plan_id` query parameter.',
+        parameters: [
+          {
+            name: 'plan_id',
+            in: 'query',
+            required: false,
+            type: 'integer',
+            description: 'Optional. ID of the plan to fetch detailed information for.',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Successfully retrieved list or details of plans.',
+            schema: {
+              oneOf: [
+                {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      plan_id: { type: 'integer', example: 1 },
+                      name: { type: 'string', example: 'Full Body Strength' },
+                      description: { type: 'string', example: 'A 4-day beginner-friendly workout split.' },
+                      duration_days: { type: 'integer', example: 4 },
+                    },
+                  },
+                },
+                {
+                  type: 'object',
+                  properties: {
+                    plan_id: { type: 'integer', example: 1 },
+                    name: { type: 'string', example: 'Full Body Strength' },
+                    description: { type: 'string', example: 'A 4-day beginner-friendly workout split.' },
+                    duration_days: { type: 'integer', example: 4 },
+                    plan_days: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          plan_day_id: { type: 'integer', example: 10 },
+                          day_number: { type: 'integer', example: 1 },
+                          day_type: { type: 'string', example: 'Upper Body' },
+                          plan_day_exercises: {
+                            type: 'array',
+                            items: {
+                              type: 'object',
+                              properties: {
+                                plan_day_exercise_id: { type: 'integer', example: 5 },
+                                sets: { type: 'integer', example: 4 },
+                                reps: { type: 'integer', example: 10 },
+                                exercises: {
+                                  type: 'object',
+                                  properties: {
+                                    exercise_id: { type: 'integer', example: 2 },
+                                    name: { type: 'string', example: 'Bench Press' },
+                                    category: { type: 'string', example: 'Chest' },
+                                    description: {
+                                      type: 'string',
+                                      example: 'A compound movement targeting chest and triceps.',
+                                    },
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+          404: { description: 'Plan not found.' },
+          500: { description: 'Failed to fetch plans.' },
+        },
+      },
+      post: {
+        tags: ['Plans'],
+        summary: 'Apply a workout plan for a user',
+        description:
+          'Assigns a workout plan to a user and automatically generates workout sessions and exercises according to the plan schedule.',
+        parameters: [
+          {
+            in: 'body',
+            name: 'body',
+            required: true,
+            schema: {
+              type: 'object',
+              required: ['user_id', 'plan_id', 'start_date'],
+              properties: {
+                user_id: { type: 'integer', example: 3 },
+                plan_id: { type: 'integer', example: 1 },
+                start_date: { type: 'string', example: '2025-10-25' },
+              },
+            },
+          },
+        ],
+        responses: {
+          201: {
+            description: 'Plan successfully applied. Workout sessions created for user.',
+            schema: {
+              type: 'object',
+              properties: {
+                message: { type: 'string', example: 'Plan applied successfully. Workout sessions created.' },
+              },
+            },
+          },
+          400: {
+            description: 'Missing required fields or invalid input.',
+            schema: {
+              type: 'object',
+              properties: {
+                error: { type: 'string', example: 'user_id, plan_id, and start_date are required.' },
+              },
+            },
+          },
+          404: {
+            description: 'User or plan not found, or plan has no exercises.',
+            schema: {
+              type: 'object',
+              properties: {
+                error: { type: 'string', example: 'Plan not found.' },
+              },
+            },
+          },
+          500: {
+            description: 'Server or database error while applying the plan.',
+            schema: {
+              type: 'object',
+              properties: {
+                error: { type: 'string', example: 'Failed to apply plan.' },
+              },
+            },
+          },
+        },
+      },
+    },
+
   }
 };
 
