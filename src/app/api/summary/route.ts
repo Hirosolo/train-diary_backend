@@ -1,46 +1,43 @@
-import { NextResponse } from 'next/server';
-import { supabase } from 'lib/supabaseClient';
-import { calculateSessionGR } from 'app/utils/grCalculator';
-
-/** ---------- Type Definitions ---------- **/
-
-interface DailySummary {
-  date: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  workouts: number;
-  gr_score: number;
-}
+import { NextResponse } from "next/server";
+import { supabase } from "lib/supabaseClient";
+import { calculateSessionGR } from "app/utils/grCalculator";
+import type {
+  WorkoutSession,
+  UserMeal,
+  ExerciseLog,
+  DailySummary,
+  WorkoutByDate,
+  UserProgressSummary,
+} from "types/datatypes";
 
 /** ---------- Helper: Generate summary data for a user ---------- **/
 
 async function generateSummaryPayload(
   user_id: number,
-  period_type: 'weekly' | 'monthly',
+  period_type: "weekly" | "monthly",
   period_start: string
 ) {
-  const periodDays = period_type === 'weekly' ? 7 : 30;
+  const periodDays = period_type === "weekly" ? 7 : 30;
 
   // Compute date range
   const startDate = new Date(period_start);
   const endDate = new Date(startDate);
   endDate.setDate(endDate.getDate() + periodDays);
-  const startISO = startDate.toISOString().split('T')[0];
-  const endISO = endDate.toISOString().split('T')[0];
+  const startISO = startDate.toISOString().split("T")[0];
+  const endISO = endDate.toISOString().split("T")[0];
 
   /** ---------- 1. Fetch completed workouts within period ---------- **/
   const { data: workoutsRaw, error: workoutsErr } = await supabase
-    .from('workout_sessions')
-    .select(`
+    .from("workout_sessions")
+    .select(
+      `
       session_id,
       scheduled_date,
       type,
       session_details (
         session_detail_id,
         exercise_id,
-        exercises (
+        exercises!inner (
           exercise_id,
           name,
           category
@@ -53,33 +50,37 @@ async function generateSummaryPayload(
           duration_seconds
         )
       )
-    `)
-    .eq('user_id', user_id)
-    .eq('completed', true)
-    .gte('scheduled_date', startISO)
-    .lt('scheduled_date', endISO)
-    .order('scheduled_date', { ascending: true });
+    `
+    )
+    .eq("user_id", user_id)
+    .eq("completed", true)
+    .gte("scheduled_date", startISO)
+    .lt("scheduled_date", endISO)
+    .order("scheduled_date", { ascending: true });
 
   if (workoutsErr) throw workoutsErr;
 
-  const sessions = (workoutsRaw ?? []) as any[];
+  // Safe cast through unknown to satisfy TS
+  const sessions = (workoutsRaw as unknown as WorkoutSession[]) ?? [];
   const total_workouts = sessions.length;
   let total_duration_seconds = 0;
-  const workoutsByDate: Record<string, { type: string; exercises: any[]; total_gr?: number }> = {};
+  const workoutsByDate: Record<string, WorkoutByDate> = {};
 
   for (const s of sessions) {
     const dateStr =
-      s.scheduled_date instanceof Date
-        ? s.scheduled_date.toISOString().split('T')[0]
-        : (s.scheduled_date as string).split('T')[0];
+      typeof s.scheduled_date === "string"
+        ? s.scheduled_date.split("T")[0]
+        : (s.scheduled_date as Date).toISOString().split("T")[0];
 
-    if (!workoutsByDate[dateStr]) workoutsByDate[dateStr] = { type: s.type, exercises: [] };
+    if (!workoutsByDate[dateStr])
+      workoutsByDate[dateStr] = { type: s.type ?? null, exercises: [] };
 
     const details = s.session_details ?? [];
     for (const sd of details) {
       const logs = sd.exercise_logs ?? [];
       for (const el of logs) {
-        if (el.duration_seconds) total_duration_seconds += Number(el.duration_seconds);
+        if (el.duration_seconds)
+          total_duration_seconds += Number(el.duration_seconds);
         workoutsByDate[dateStr].exercises.push({
           exercise_name: sd.exercises?.name ?? null,
           exercise_category: sd.exercises?.category ?? null,
@@ -87,7 +88,7 @@ async function generateSummaryPayload(
           actual_reps: el.actual_reps,
           weight_kg: el.weight_kg,
           duration_seconds: el.duration_seconds,
-        });
+        } as unknown as ExerciseLog);
       }
     }
   }
@@ -96,15 +97,16 @@ async function generateSummaryPayload(
 
   /** ---------- 2. Fetch user meal logs within period ---------- **/
   const { data: mealsRaw, error: mealsErr } = await supabase
-    .from('user_meals')
-    .select(`
+    .from("user_meals")
+    .select(
+      `
       meal_id,
       log_date,
       meal_type,
       user_meal_details (
         meal_detail_id,
         amount_grams,
-        foods (
+        foods!inner (
           food_id,
           calories_per_serving,
           protein_per_serving,
@@ -112,10 +114,11 @@ async function generateSummaryPayload(
           fat_per_serving
         )
       )
-    `)
-    .eq('user_id', user_id)
-    .gte('log_date', startISO)
-    .lt('log_date', endISO);
+    `
+    )
+    .eq("user_id", user_id)
+    .gte("log_date", startISO)
+    .lt("log_date", endISO);
 
   if (mealsErr) throw mealsErr;
 
@@ -125,17 +128,17 @@ async function generateSummaryPayload(
   let total_carbs = 0;
   let total_fat = 0;
 
-  const meals = (mealsRaw ?? []) as any[];
+  const meals = (mealsRaw as unknown as UserMeal[]) ?? [];
   for (const m of meals) {
     const details = m.user_meal_details ?? [];
     for (const d of details) {
       const f = d.foods;
       if (!f) continue;
       const grams = Number(d.amount_grams ?? 0);
-      total_calories_intake += Number(f.calories_per_serving ?? 0) * grams;
-      total_protein += Number(f.protein_per_serving ?? 0) * grams;
-      total_carbs += Number(f.carbs_per_serving ?? 0) * grams;
-      total_fat += Number(f.fat_per_serving ?? 0) * grams;
+      total_calories_intake += f.calories_per_serving * grams;
+      total_protein += f.protein_per_serving * grams;
+      total_carbs += f.carbs_per_serving * grams;
+      total_fat += f.fat_per_serving * grams;
     }
   }
 
@@ -147,8 +150,15 @@ async function generateSummaryPayload(
   /** ---------- 4. Calculate GR score per workout day ---------- **/
   let total_gr_score = 0;
   let workout_count = 0;
-  for (const [date, w] of Object.entries(workoutsByDate)) {
-    const dailyGR = calculateSessionGR(w.exercises as any[]);
+  for (const [, w] of Object.entries(workoutsByDate)) {
+    const dailyGR = calculateSessionGR(
+      w.exercises.map((ex) => ({
+        ...ex,
+        weight_kg: ex.weight_kg ?? 0, // ensure number
+        exercise_category: ex.exercise_category ?? "unknown", // ensure string
+      }))
+    );
+
     w.total_gr = dailyGR;
     total_gr_score += dailyGR;
     if (dailyGR > 0) workout_count++;
@@ -156,7 +166,7 @@ async function generateSummaryPayload(
   const avg_gr_score = workout_count > 0 ? total_gr_score / workout_count : 0;
 
   /** ---------- 5. Upsert summary record ---------- **/
-  const upsertPayload = {
+  const upsertPayload: UserProgressSummary = {
     user_id,
     period_type,
     period_start: startISO,
@@ -172,15 +182,15 @@ async function generateSummaryPayload(
   };
 
   const { error: upsertErr } = await supabase
-    .from('user_progress_summary')
-    .upsert(upsertPayload, { onConflict: 'user_id,period_type,period_start' });
+    .from("user_progress_summary")
+    .upsert(upsertPayload, { onConflict: "user_id,period_type,period_start" });
 
   if (upsertErr) throw upsertErr;
 
   /** ---------- 6. Build daily summaries ---------- **/
   const dailySummaries: Record<string, DailySummary> = {};
   for (let d = new Date(startDate); d < endDate; d.setDate(d.getDate() + 1)) {
-    const iso = d.toISOString().split('T')[0];
+    const iso = d.toISOString().split("T")[0];
     dailySummaries[iso] = {
       date: iso,
       calories: 0,
@@ -194,7 +204,9 @@ async function generateSummaryPayload(
 
   for (const m of meals) {
     const day =
-      m.log_date instanceof Date ? m.log_date.toISOString().split('T')[0] : m.log_date;
+      typeof m.log_date === "string"
+        ? m.log_date
+        : (m.log_date as Date).toISOString().split("T")[0];
     let dayCalories = 0,
       dayProtein = 0,
       dayCarbs = 0,
@@ -204,10 +216,10 @@ async function generateSummaryPayload(
       const f = d.foods;
       if (!f) continue;
       const grams = Number(d.amount_grams ?? 0);
-      dayCalories += Number(f.calories_per_serving ?? 0) * grams;
-      dayProtein += Number(f.protein_per_serving ?? 0) * grams;
-      dayCarbs += Number(f.carbs_per_serving ?? 0) * grams;
-      dayFat += Number(f.fat_per_serving ?? 0) * grams;
+      dayCalories += f.calories_per_serving * grams;
+      dayProtein += f.protein_per_serving * grams;
+      dayCarbs += f.carbs_per_serving * grams;
+      dayFat += f.fat_per_serving * grams;
     }
     if (dailySummaries[day]) {
       dailySummaries[day].calories = Math.round(dayCalories);
@@ -249,7 +261,7 @@ export async function POST(request: Request) {
 
     if (!user_id || !period_type || !period_start) {
       return NextResponse.json(
-        { message: 'user_id, period_type, and period_start are required.' },
+        { message: "user_id, period_type, and period_start are required." },
         { status: 400 }
       );
     }
@@ -260,10 +272,10 @@ export async function POST(request: Request) {
       period_start
     );
     return NextResponse.json(payload, { status: 201 });
-  } catch (err: any) {
-    console.error('Failed to generate summary:', err);
+  } catch (err) {
+    console.error("Failed to generate summary:", err);
     return NextResponse.json(
-      { message: 'Failed to generate summary.', error: err.message || String(err) },
+      { message: "Failed to generate summary.", error: (err as Error).message },
       { status: 500 }
     );
   }
@@ -273,16 +285,16 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
-    const user_id = url.searchParams.get('user_id');
-    const period_type = url.searchParams.get('period_type') as
-      | 'weekly'
-      | 'monthly'
+    const user_id = url.searchParams.get("user_id");
+    const period_type = url.searchParams.get("period_type") as
+      | "weekly"
+      | "monthly"
       | null;
-    const period_start = url.searchParams.get('period_start');
+    const period_start = url.searchParams.get("period_start");
 
     if (!user_id || !period_type || !period_start) {
       return NextResponse.json(
-        { message: 'user_id, period_type, and period_start are required.' },
+        { message: "user_id, period_type, and period_start are required." },
         { status: 400 }
       );
     }
@@ -293,10 +305,10 @@ export async function GET(request: Request) {
       period_start
     );
     return NextResponse.json(payload, { status: 200 });
-  } catch (err: any) {
-    console.error('Failed to get summary:', err);
+  } catch (err) {
+    console.error("Failed to get summary:", err);
     return NextResponse.json(
-      { message: 'Failed to get summary.', error: err.message || String(err) },
+      { message: "Failed to get summary.", error: (err as Error).message },
       { status: 500 }
     );
   }

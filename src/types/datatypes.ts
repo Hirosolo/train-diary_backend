@@ -1,22 +1,13 @@
-// Auto-generated interfaces from PostgreSQL schema
-
-export interface DiaryEntry {
-  id: number;
-  user_id: number;
-  title: string;
-  content?: string | null;
-  created_at: string; // ISO timestamp
-  updated_at: string;
-}
-
 export interface ExerciseLog {
   log_id: number;
-  session_detail_id: number;
+  session_detail_id?: number;
   actual_sets: number;
   actual_reps: number;
   weight_kg?: number | null;
   duration_seconds?: number | null;
   notes?: string | null;
+  exercise_name?: string | null;
+  exercise_category?: string | null;
 }
 
 export interface Exercise {
@@ -28,6 +19,28 @@ export interface Exercise {
   description?: string | null;
 }
 
+export interface SessionDetail {
+  session_detail_id: number;
+  session_id?: number;
+  exercise_id: number;
+  planned_sets?: number | null;
+  planned_reps?: number | null;
+  exercises?: Exercise;
+  exercise_logs?: ExerciseLog[];
+}
+
+export interface WorkoutSession {
+  session_id: number;
+  user_id?: number;
+  scheduled_date: string; // ISO date string (YYYY-MM-DD)
+  type?: string | null;
+  notes?: string | null;
+  completed?: boolean;
+  session_details?: SessionDetail[];
+}
+
+/** ---------- Nutrition & Meals ---------- **/
+
 export interface Food {
   food_id: number;
   name: string;
@@ -35,90 +48,60 @@ export interface Food {
   protein_per_serving: number;
   carbs_per_serving: number;
   fat_per_serving: number;
-  serving_type: string;
+  serving_type?: string;
   image?: string | null;
-}
-
-export interface PlanDayExercise {
-  plan_day_exercise_id: number;
-  plan_day_id: number;
-  exercise_id: number;
-  sets?: number | null;
-  reps?: number | null;
-}
-
-export interface PlanDay {
-  plan_day_id: number;
-  plan_id: number;
-  day_number: number;
-  day_type?: string | null;
-}
-
-export interface SessionDetail {
-  session_detail_id: number;
-  session_id: number;
-  exercise_id: number;
-  planned_sets?: number | null;
-  planned_reps?: number | null;
-}
-
-export interface TrainingSession {
-  id: number;
-  user_id: number;
-  session_date: string; // Date only (YYYY-MM-DD)
-  notes?: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface UserMealDetail {
   meal_detail_id: number;
-  meal_id: number;
+  meal_id?: number;
   food_id: number;
   amount_grams: number;
+  foods?: Food;
 }
 
 export interface UserMeal {
   meal_id: number;
-  user_id: number;
+  user_id?: number;
   meal_type: string;
-  log_date: string;
+  log_date: string; // ISO date string
+  user_meal_details?: UserMealDetail[];
 }
+
+/** ---------- Progress Summary ---------- **/
 
 export interface UserProgressSummary {
-  summary_id: number;
+  summary_id?: number;
   user_id: number;
-  period_type: 'weekly' | 'monthly';
-  period_start: string;
-  total_workouts?: number | null;
-  total_calories_burned?: number | null;
-  avg_duration_minutes?: number | null;
-  total_calories_intake?: number | null;
-  avg_protein?: number | null;
-  avg_carbs?: number | null;
-  avg_fat?: number | null;
+  period_type: "weekly" | "monthly";
+  period_start: string; // ISO date string
+  total_workouts?: number;
+  total_calories_burned?: number;
+  avg_duration_minutes?: number;
+  total_calories_intake?: number;
+  avg_protein?: number;
+  avg_carbs?: number;
+  avg_fat?: number;
+  total_gr_score?: number;
+  avg_gr_score?: number;
 }
 
-export interface User {
-  user_id: number;
-  email: string;
-  password_hash: string;
-  created_at?: string | null;
-  username?: string | null;
+/** ---------- Daily Summary ---------- **/
+
+export interface DailySummary {
+  date: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  workouts: number;
+  gr_score: number;
 }
 
-export interface WorkoutPlan {
-  plan_id: number;
-  name: string;
-  description?: string | null;
-}
+/** ---------- Utility Aggregates ---------- **/
 
-export interface WorkoutSession {
-  session_id: number;
-  user_id: number;
-  scheduled_date: string;
-  type?: string | null;
-  notes?: string | null;
-  completed?: boolean | null;
+export interface WorkoutByDate {
+  type: string | null;
+  exercises: ExerciseLog[];
+  total_gr?: number;
 }
-
