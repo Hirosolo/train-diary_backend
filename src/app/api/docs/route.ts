@@ -22,7 +22,10 @@ const spec = {
       name: "Workout Sessions",
       description: "Workout session management endpoints",
     },
-    { name: "Summary", description: "User summary and progress analytics" },
+    {
+      name: "Summary",
+      description: "User progress and statistics summary endpoints",
+    },
   ],
   paths: {
     // --- AUTHENTICATION ---
@@ -788,69 +791,78 @@ const spec = {
       },
     },
 
-    /** ---------- SUMMARY ENDPOINT ---------- **/
+    // --- SUMMARY ---
     "/summary": {
       get: {
         tags: ["Summary"],
-        summary: "Get summary data for a user",
+        summary: "Get user's summary data",
         description:
-          "Regenerate and retrieve summary statistics (nutrition, workouts, GR scores) for a specific user and period (weekly or monthly).",
+          "Retrieve summary information including workout and nutrition data for a specific date range.",
         parameters: [
           {
             name: "user_id",
             in: "query",
             required: true,
             type: "integer",
-            description: "User ID whose summary will be fetched.",
-            example: 1,
+            description: "ID of the user to get summary for",
           },
           {
-            name: "period_type",
+            name: "start_date",
             in: "query",
             required: true,
             type: "string",
-            enum: ["weekly", "monthly"],
-            description: "Summary period type.",
-            example: "weekly",
+            format: "date",
+            description: "Start date for the summary period (YYYY-MM-DD)",
           },
           {
-            name: "period_start",
+            name: "end_date",
             in: "query",
             required: true,
             type: "string",
-            description:
-              "Start date of the period (YYYY-MM-DD). End date is auto-calculated.",
-            example: "2025-10-01",
+            format: "date",
+            description: "End date for the summary period (YYYY-MM-DD)",
           },
         ],
         responses: {
           200: {
-            description: "Successfully generated summary for given period.",
+            description: "Successfully retrieved summary data",
             schema: {
               type: "object",
               properties: {
-                total_workouts: { type: "integer", example: 5 },
-                total_calories_intake: { type: "integer", example: 14500 },
-                avg_protein: { type: "number", example: 120 },
-                avg_carbs: { type: "number", example: 200 },
-                avg_fat: { type: "number", example: 60 },
-                total_duration_minutes: { type: "integer", example: 450 },
-                total_gr_score: { type: "number", example: 450 },
-                avg_gr_score: { type: "number", example: 90 },
-                dailyData: {
-                  type: "array",
-                  description:
-                    "List of daily summaries (nutrition and workout performance).",
-                  items: {
-                    type: "object",
-                    properties: {
-                      date: { type: "string", example: "2025-10-02" },
-                      calories: { type: "integer", example: 2100 },
-                      protein: { type: "integer", example: 130 },
-                      carbs: { type: "integer", example: 250 },
-                      fat: { type: "integer", example: 70 },
-                      workouts: { type: "integer", example: 1 },
-                      gr_score: { type: "number", example: 85 },
+                workoutSummary: {
+                  type: "object",
+                  properties: {
+                    totalSessions: { type: "integer", example: 12 },
+                    completedSessions: { type: "integer", example: 10 },
+                    totalExercises: { type: "integer", example: 48 },
+                    topExercises: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          name: { type: "string", example: "Bench Press" },
+                          count: { type: "integer", example: 5 },
+                        },
+                      },
+                    },
+                  },
+                },
+                nutritionSummary: {
+                  type: "object",
+                  properties: {
+                    averageCalories: { type: "number", example: 2150.5 },
+                    averageProtein: { type: "number", example: 160.2 },
+                    averageCarbs: { type: "number", example: 220.8 },
+                    averageFat: { type: "number", example: 70.3 },
+                    topFoods: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          name: { type: "string", example: "Chicken Breast" },
+                          count: { type: "integer", example: 8 },
+                        },
+                      },
                     },
                   },
                 },
@@ -858,96 +870,25 @@ const spec = {
             },
           },
           400: {
-            description: "Missing required query parameters.",
+            description: "Missing required parameters or invalid date format",
             schema: {
               type: "object",
               properties: {
-                message: {
+                error: {
                   type: "string",
-                  example:
-                    "user_id, period_type, and period_start are required.",
+                  example: "Missing required parameters or invalid date format",
                 },
               },
             },
           },
           500: {
-            description: "Server or database error while generating summary.",
+            description: "Server error while fetching summary data",
             schema: {
               type: "object",
               properties: {
-                message: {
+                error: {
                   type: "string",
-                  example: "Failed to generate summary.",
-                },
-              },
-            },
-          },
-        },
-      },
-      post: {
-        tags: ["Summary"],
-        summary: "Generate summary data (POST version)",
-        description:
-          "Generates and stores a new summary record for a user based on food logs, workouts, and GR scores within the specified period.",
-        parameters: [
-          {
-            in: "body",
-            name: "body",
-            required: true,
-            schema: {
-              type: "object",
-              required: ["user_id", "period_type", "period_start"],
-              properties: {
-                user_id: { type: "integer", example: 1 },
-                period_type: {
-                  type: "string",
-                  enum: ["weekly", "monthly"],
-                  example: "monthly",
-                },
-                period_start: {
-                  type: "string",
-                  example: "2025-10-01",
-                  description:
-                    "Start date of the summary period (YYYY-MM-DD format).",
-                },
-              },
-            },
-          },
-        ],
-        responses: {
-          201: {
-            description: "Summary generated successfully.",
-            schema: {
-              type: "object",
-              properties: {
-                message: {
-                  type: "string",
-                  example: "Summary generated successfully.",
-                },
-              },
-            },
-          },
-          400: {
-            description: "Missing required fields in body.",
-            schema: {
-              type: "object",
-              properties: {
-                message: {
-                  type: "string",
-                  example:
-                    "user_id, period_type, and period_start are required.",
-                },
-              },
-            },
-          },
-          500: {
-            description: "Server or calculation error.",
-            schema: {
-              type: "object",
-              properties: {
-                message: {
-                  type: "string",
-                  example: "Failed to generate summary.",
+                  example: "Failed to fetch summary data",
                 },
               },
             },
