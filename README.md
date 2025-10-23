@@ -1,36 +1,127 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Train Diary Backend
 
-## Getting Started
+A RESTful backend API for the **Train Diary** application — a fitness tracking system designed to record workouts, manage exercise routines, and analyze progress over time.
 
-First, run the development server:
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/Hirosolo/train-diary_backend)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-1.0.0-orange.svg)](https://github.com/Hirosolo/train-diary_backend/releases)
 
+---
+
+## Features
+
+### Core Functionality
+- User authentication (JWT-based)
+- CRUD operations for workouts, exercises, and logs
+- Tracking exercise performance (weight, reps, sets, notes)
+- Support for multiple users and private diaries
+- Integration with PostgreSQL database
+
+### Developer Tools
+- FastAPI-based RESTful architecture
+- Alembic migrations for database schema
+- Pydantic models for data validation
+- Docker support for local development
+
+---
+
+## Tech Stack
+- **Backend Framework:** FastAPI (Python 3.10+)
+- **Database:** PostgreSQL
+- **ORM:** SQLAlchemy + Alembic
+- **Authentication:** JWT (via PyJWT)
+- **Containerization:** Docker + Docker Compose
+
+---
+
+## Installation
+
+### 1. Clone the Repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/Hirosolo/train-diary_backend.git
+cd train-diary_backend
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Setup the Environment
+Create and activate a virtual environment:
+```bash
+python3 -m venv venv
+source venv/bin/activate  # for Windows: venv\Scripts\activate
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3. Configure Environment Variables
+Create a `.env` file in the project root with the following content:
+```
+DATABASE_URL=postgresql://postgres:password@localhost:5432/train_diary
+SECRET_KEY=your_secret_key
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+```
 
-## Learn More
+### 4. Setup the Database
+Run migrations:
+```bash
+alembic upgrade head
+```
 
-To learn more about Next.js, take a look at the following resources:
+(Optional) Initialize with sample data:
+```bash
+python scripts/seed_data.py
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 5. Run the Development Server
+```bash
+uvicorn app.main:app --reload
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The API will be available at [http://localhost:8000](http://localhost:8000)
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Docker Setup (Alternative)
+```bash
+docker-compose up --build
+```
+The backend runs on port `8000` by default.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## API Documentation
+- Interactive docs (Swagger UI): [http://localhost:8000/docs](http://localhost:8000/docs)
+- Alternative docs (ReDoc): [http://localhost:8000/redoc](http://localhost:8000/redoc)
+
+---
+
+## Environment Variables
+| Variable | Description | Example |
+|-----------|--------------|----------|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:password@localhost:5432/train_diary` |
+| `SECRET_KEY` | JWT signing key | `supersecretkey` |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Token expiration time | `60` |
+
+---
+
+## Testing
+Run unit tests using pytest:
+```bash
+pytest
+```
+
+Generate a coverage report:
+```bash
+pytest --cov=app
+```
+
+---
+
+## License
+This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
+
+---
+
+## Author
+Developed by [Hirosolo](https://github.com/Hirosolo)
