@@ -1,136 +1,166 @@
-import { NextResponse } from 'next/server'
-import { supabase } from 'lib/supabaseClient'
+import { NextResponse } from 'next/server';
+import { supabase } from 'lib/supabaseClient';
 
 /**
- * @swagger
- * /api/foods:
- *   get:
- *     summary: Get all foods
- *     description: Retrieve all food items from the database, ordered by name.
- *     tags:
- *       - Foods
- *     responses:
- *       200:
- *         description: Successfully retrieved list of foods.
- *         schema:
- *           type: array
- *           items:
- *             type: object
- *             properties:
- *               food_id:
- *                 type: string
- *                 example: "1"
- *               name:
- *                 type: string
- *                 example: "Grilled Chicken Breast"
- *               calories_per_serving:
- *                 type: number
- *                 example: 165
- *               protein_per_serving:
- *                 type: number
- *                 example: 31
- *               carbs_per_serving:
- *                 type: number
- *                 example: 0
- *               fat_per_serving:
- *                 type: number
- *                 example: 3.6
- *               serving_type:
- *                 type: string
- *                 example: "100g"
- *               image:
- *                 type: string
- *                 example: "https://example.com/images/chicken.jpg"
- *       500:
- *         description: Failed to fetch foods.
- *
- *   post:
- *     summary: Add a new food
- *     description: Create a new food record in the database.
- *     tags:
- *       - Foods
- *     parameters:
- *       - in: body
- *         name: body
- *         description: Food data to add.
- *         required: true
- *         schema:
- *           type: object
- *           required:
- *             - name
- *             - serving_type
- *           properties:
- *             name:
- *               type: string
- *               example: "Oatmeal"
- *             calories_per_serving:
- *               type: number
- *               example: 68
- *             protein_per_serving:
- *               type: number
- *               example: 2.4
- *             carbs_per_serving:
- *               type: number
- *               example: 12
- *             fat_per_serving:
- *               type: number
- *               example: 1.4
- *             serving_type:
- *               type: string
- *               example: "100g"
- *             image:
- *               type: string
- *               example: "https://example.com/images/oatmeal.jpg"
- *     responses:
- *       201:
- *         description: Food successfully added.
- *         schema:
- *           type: object
- *           properties:
- *             food_id:
- *               type: string
- *               example: "2"
- *             message:
- *               type: string
- *               example: "Food added."
- *       400:
- *         description: Missing required fields.
- *       500:
- *         description: Failed to add food.
+ * Foods API (CRUD)
+ * - GET: fetch all foods or one by ?food_id
+ * - POST: create new food
+ * - PUT: update existing food
+ * - DELETE: remove a food
  */
 
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const foodId = searchParams.get('food_id');
 
-// GET all foods
-export async function GET() {
-  const { data, error } = await supabase
-    .from('foods')
-    .select('food_id, name, calories_per_serving, protein_per_serving, carbs_per_serving, fat_per_serving, serving_type, image')
-    .order('name', { ascending: true })
+    let query = supabase.from('foods').select('*');
+    if (foodId) query = query.eq('food_id', foodId);
 
-  if (error) {
-    return NextResponse.json({ message: 'Failed to fetch foods', error: error.message }, { status: 500 })
+    const { data, error } = await query.order('name', { ascending: true });
+
+    if (error)
+      return NextResponse.json({ error: 'Failed to fetch foods.' }, { status: 500 });
+
+    if (foodId && (!data || data.length === 0))
+      return NextResponse.json({ error: 'Food not found.' }, { status: 404 });
+
+    return NextResponse.json(data, { status: 200 });
+  } catch (err) {
+    return NextResponse.json(
+      { error: 'Unexpected error occurred while fetching foods.' },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json(data, { status: 200 })
 }
 
-// POST add new food
 export async function POST(req: Request) {
-  const { name, calories_per_serving, protein_per_serving, carbs_per_serving, fat_per_serving, serving_type, image } = await req.json()
+  try {
+    const body = await req.json();
+    const {
+      name,
+      calories_per_serving,
+      protein_per_serving,
+      carbs_per_serving,
+      fat_per_serving,
+      serving_type,
+      image,
+    } = body;
 
-  if (!name || !serving_type) {
-    return NextResponse.json({ message: 'Name and serving_type are required.' }, { status: 400 })
+    // ✅ Validate required fields
+    if (!name || !serving_type) {
+      return NextResponse.json(
+        { error: 'Missing required fields: name or serving_type.' },
+        { status: 400 }
+      );
+    }
+
+    const { data, error } = await supabase
+      .from('foods')
+      .insert([
+        {
+          name,
+          calories_per_serving,
+          protein_per_serving,
+          carbs_per_serving,
+          fat_per_serving,
+          serving_type,
+          image,
+        },
+      ])
+      .select();
+
+    if (error)
+      return NextResponse.json({ error: 'Failed to add food.' }, { status: 500 });
+
+    return NextResponse.json(
+      {
+        food_id: data?.[0]?.food_id,
+        message: 'Food added successfully.',
+        data: data?.[0],
+      },
+      { status: 201 }
+    );
+  } catch (err) {
+    return NextResponse.json(
+      { error: 'Unexpected error occurred while adding food.' },
+      { status: 500 }
+    );
   }
+}
 
-  const { data, error } = await supabase
-    .from('foods')
-    .insert([{ name, calories_per_serving, protein_per_serving, carbs_per_serving, fat_per_serving, serving_type, image }])
-    .select('food_id')
-    .single()
+export async function PUT(req: Request) {
+  try {
+    const body = await req.json();
+    const { food_id, ...updates } = body;
 
-  if (error) {
-    return NextResponse.json({ message: 'Failed to add food.', error: error.message }, { status: 500 })
+    if (!food_id)
+      return NextResponse.json(
+        { error: 'Missing food_id for update.' },
+        { status: 400 }
+      );
+
+    const { data, error } = await supabase
+      .from('foods')
+      .update(updates)
+      .eq('food_id', food_id)
+      .select();
+
+    if (error)
+      return NextResponse.json({ error: 'Failed to update food.' }, { status: 500 });
+
+    if (!data || data.length === 0)
+      return NextResponse.json({ error: 'Food not found.' }, { status: 404 });
+
+    return NextResponse.json(
+      {
+        message: 'Food updated successfully.',
+        data: data[0],
+      },
+      { status: 200 }
+    );
+  } catch (err) {
+    return NextResponse.json(
+      { error: 'Unexpected error occurred while updating food.' },
+      { status: 500 }
+    );
   }
+}
 
-  return NextResponse.json({ food_id: data.food_id, message: 'Food added.' }, { status: 201 })
+export async function DELETE(req: Request) {
+  try {
+    const body = await req.json();
+    const { food_id } = body;
+
+    if (!food_id)
+      return NextResponse.json(
+        { error: 'Missing food_id for delete.' },
+        { status: 400 }
+      );
+
+    // Check if exists before delete
+    const { data: existing } = await supabase
+      .from('foods')
+      .select('food_id')
+      .eq('food_id', food_id)
+      .maybeSingle();
+
+    if (!existing)
+      return NextResponse.json({ error: 'Food not found.' }, { status: 404 });
+
+    const { error } = await supabase.from('foods').delete().eq('food_id', food_id);
+
+    if (error)
+      return NextResponse.json({ error: 'Failed to delete food.' }, { status: 500 });
+
+    return NextResponse.json(
+      { message: 'Food deleted successfully.' },
+      { status: 200 }
+    );
+  } catch (err) {
+    return NextResponse.json(
+      { error: 'Unexpected error occurred while deleting food.' },
+      { status: 500 }
+    );
+  }
 }

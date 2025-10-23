@@ -13,9 +13,11 @@ const spec = {
   tags: [
     { name: 'Authentication', description: 'Authentication endpoints' },
     { name: 'Exercises', description: 'Exercise management endpoints' },
-    { name: 'Foods', description: 'Food management endpoints' }
+    { name: 'Foods', description: 'Food management endpoints' },
+    { name: 'Food Logs', description: 'Food log (meal tracking) endpoints' }
   ],
   paths: {
+  // --- AUTHENTICATION ---
     '/auth/login': {
       post: {
         tags: ['Authentication'],
@@ -65,6 +67,7 @@ const spec = {
         }
       }
     },
+     // --- EXERCISES ---
     '/exercises': {
       get: {
         tags: ['Exercises'],
@@ -154,70 +157,232 @@ const spec = {
         }
       }
     },
+    // --- FOOD LOGS ---
     '/foods': {
       get: {
         tags: ['Foods'],
-        summary: 'Get all foods',
-        description: 'Retrieve all food items from the database, ordered by name.',
+        summary: 'Get all foods or one (by query)',
+        parameters: [
+          {
+            name: 'food_id',
+            in: 'query',
+            required: false,
+            type: 'integer',
+            description: 'Optional: ID of the food to retrieve'
+          }
+        ],
         responses: {
-          200: {
-            description: 'Successfully retrieved list of foods.',
-            schema: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  food_id: { type: 'string', example: "1" },
-                  name: { type: 'string', example: "Grilled Chicken Breast" },
-                  calories_per_serving: { type: 'number', example: 165 },
-                  protein_per_serving: { type: 'number', example: 31 },
-                  carbs_per_serving: { type: 'number', example: 0 },
-                  fat_per_serving: { type: 'number', example: 3.6 },
-                  serving_type: { type: 'string', example: "100g" },
-                  image: { type: 'string', example: "https://example.com/images/chicken.jpg" }
-                }
-              }
-            }
-          },
+          200: { description: 'List or single food record retrieved.' },
           500: { description: 'Failed to fetch foods.' }
         }
       },
       post: {
         tags: ['Foods'],
-        summary: 'Add a new food',
+        summary: 'Add a new food item',
+        parameters: [{
+          in: 'body',
+          name: 'body',
+          required: true,
+          schema: {
+            type: 'object',
+            required: ['name', 'serving_type'],
+            properties: {
+              name: { type: 'string', example: "Oatmeal" },
+              calories_per_serving: { type: 'number', example: 68 },
+              protein_per_serving: { type: 'number', example: 2.4 },
+              carbs_per_serving: { type: 'number', example: 12 },
+              fat_per_serving: { type: 'number', example: 1.4 },
+              serving_type: { type: 'string', example: "100g" },
+              image: { type: 'string', example: "https://example.com/images/oatmeal.jpg" }
+            }
+          }
+        }],
+        responses: {
+          200: { description: 'Food successfully added.' },
+          400: { description: 'Missing required fields.' },
+          500: { description: 'Failed to add food.' }
+        }
+      },
+      put: {
+        tags: ['Foods'],
+        summary: 'Update a food item',
+        parameters: [{
+          in: 'body',
+          name: 'body',
+          required: true,
+          schema: {
+            type: 'object',
+            required: ['food_id'],
+            properties: {
+              food_id: { type: 'integer', example: 1 },
+              name: { type: 'string', example: "Grilled Chicken Breast" },
+              calories_per_serving: { type: 'number', example: 165 }
+            }
+          }
+        }],
+        responses: {
+          200: { description: 'Food updated successfully.' },
+          400: { description: 'Missing food_id.' },
+          500: { description: 'Failed to update food.' }
+        }
+      },
+      delete: {
+        tags: ['Foods'],
+        summary: 'Delete a food item',
+        parameters: [{
+          in: 'body',
+          name: 'body',
+          required: true,
+          schema: {
+            type: 'object',
+            required: ['food_id'],
+            properties: {
+              food_id: { type: 'integer', example: 1 }
+            }
+          }
+        }],
+        responses: {
+          200: { description: 'Food deleted successfully.' },
+          400: { description: 'Missing food_id.' },
+          500: { description: 'Failed to delete food.' }
+        }
+      }
+    },
+
+    // --- FOOD LOGS ---
+    '/food-logs': {
+      get: {
+        tags: ['Food Logs'],
+        summary: 'Get all food logs or one (by query)',
         parameters: [
           {
-            in: 'body',
-            name: 'body',
-            required: true,
-            schema: {
-              type: 'object',
-              required: ['name', 'serving_type'],
-              properties: {
-                name: { type: 'string', example: "Oatmeal" },
-                calories_per_serving: { type: 'number', example: 68 },
-                protein_per_serving: { type: 'number', example: 2.4 },
-                carbs_per_serving: { type: 'number', example: 12 },
-                fat_per_serving: { type: 'number', example: 1.4 },
-                serving_type: { type: 'string', example: "100g" },
-                image: { type: 'string', example: "https://example.com/images/oatmeal.jpg" }
-              }
-            }
+            name: 'meal_id',
+            in: 'query',
+            required: false,
+            type: 'integer',
+            description: 'Optional: meal_id to get a single log.'
           }
         ],
         responses: {
-          201: {
-            description: 'Food successfully added.',
+          200: {
+            description: 'List of food logs with their meal details.',
             schema: {
-              type: 'object',
-              properties: {
-                food_id: { type: 'string', example: "2" },
-                message: { type: 'string', example: "Food added." }
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  meal_id: { type: 'integer', example: 1 },
+                  user_id: { type: 'integer', example: 3 },
+                  meal_type: { type: 'string', example: 'Lunch' },
+                  log_date: { type: 'string', example: '2025-10-23' },
+                  user_meal_details: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        amount_grams: { type: 'number', example: 150 },
+                        foods: {
+                          type: 'object',
+                          properties: {
+                            name: { type: 'string', example: 'Rice' },
+                            calories_per_serving: { type: 'number', example: 130 }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
               }
             }
           },
+          500: { description: 'Failed to fetch food logs.' }
+        }
+      },
+      post: {
+        tags: ['Food Logs'],
+        summary: 'Add a new food log (meal + foods)',
+        parameters: [{
+          in: 'body',
+          name: 'body',
+          required: true,
+          schema: {
+            type: 'object',
+            required: ['user_id', 'meal_type', 'log_date', 'foods'],
+            properties: {
+              user_id: { type: 'integer', example: 1 },
+              meal_type: { type: 'string', example: 'Dinner' },
+              log_date: { type: 'string', example: '2025-10-23' },
+              foods: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    food_id: { type: 'integer', example: 2 },
+                    amount_grams: { type: 'number', example: 100 }
+                  }
+                }
+              }
+            }
+          }
+        }],
+        responses: {
+          200: { description: 'Food log created successfully.' },
           400: { description: 'Missing required fields.' },
-          500: { description: 'Failed to add food.' }
+          500: { description: 'Failed to create food log.' }
+        }
+      },
+      put: {
+        tags: ['Food Logs'],
+        summary: 'Update a food log (meal and foods)',
+        parameters: [{
+          in: 'body',
+          name: 'body',
+          required: true,
+          schema: {
+            type: 'object',
+            required: ['meal_id'],
+            properties: {
+              meal_id: { type: 'integer', example: 3 },
+              meal_type: { type: 'string', example: 'Breakfast' },
+              log_date: { type: 'string', example: '2025-10-24' },
+              foods: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    food_id: { type: 'integer', example: 5 },
+                    amount_grams: { type: 'number', example: 80 }
+                  }
+                }
+              }
+            }
+          }
+        }],
+        responses: {
+          200: { description: 'Food log updated successfully.' },
+          400: { description: 'Missing meal_id.' },
+          500: { description: 'Failed to update food log.' }
+        }
+      },
+      delete: {
+        tags: ['Food Logs'],
+        summary: 'Delete a food log (and its details)',
+        parameters: [{
+          in: 'body',
+          name: 'body',
+          required: true,
+          schema: {
+            type: 'object',
+            required: ['meal_id'],
+            properties: {
+              meal_id: { type: 'integer', example: 2 }
+            }
+          }
+        }],
+        responses: {
+          200: { description: 'Food log deleted successfully.' },
+          400: { description: 'Missing meal_id.' },
+          500: { description: 'Failed to delete food log.' }
         }
       }
     }
