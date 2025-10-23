@@ -1,11 +1,38 @@
 import { NextResponse } from 'next/server';
 import { supabase } from 'lib/supabaseClient';
 
-/**
- * Workout Plans API (CRUD-style + Apply)
- * - GET: list all plans or get details by ?plan_id
- * - POST: apply a plan for a user
- */
+/** ---------- Type Definitions ---------- **/
+
+interface Exercise {
+  exercise_id: number;
+  name: string;
+  category: string;
+  description: string;
+}
+
+interface PlanDayExercise {
+  plan_day_exercise_id?: number;
+  exercise_id: number;
+  sets: number | null;
+  reps: number | null;
+  exercises?: Exercise;
+}
+
+interface PlanDay {
+  plan_day_id: number;
+  day_number: number;
+  day_type?: string | null;
+  plan_day_exercises?: PlanDayExercise[];
+}
+
+interface WorkoutPlan {
+  plan_id: number;
+  name: string;
+  description: string;
+  plan_days?: PlanDay[];
+}
+
+/** ---------- GET: list all plans or get details by plan_id ---------- **/
 
 export async function GET(req: Request) {
   try {
@@ -13,21 +40,28 @@ export async function GET(req: Request) {
     const planId = searchParams.get('plan_id');
 
     if (!planId) {
-      // List all plans with duration
       const { data, error } = await supabase
         .from('workout_plans')
         .select('plan_id, name, description, plan_days(day_number)')
-        .order('plan_id', { ascending: true });
+        .order('plan_id', { ascending: true })
+        .returns<
+          {
+            plan_id: number;
+            name: string;
+            description: string;
+            plan_days: { day_number: number }[] | null;
+          }[]
+        >();
 
       if (error)
         return NextResponse.json({ error: 'Failed to fetch plans.' }, { status: 500 });
 
-      // Compute duration_days (max day_number)
       const plans = data.map((plan) => {
         const duration =
           plan.plan_days && plan.plan_days.length
-            ? Math.max(...plan.plan_days.map((d: any) => d.day_number))
+            ? Math.max(...plan.plan_days.map((d) => d.day_number))
             : 0;
+
         return {
           plan_id: plan.plan_id,
           name: plan.name,
@@ -39,7 +73,7 @@ export async function GET(req: Request) {
       return NextResponse.json(plans, { status: 200 });
     }
 
-    // Get plan details by plan_id
+    // Get single plan details
     const { data: plan, error: planErr } = await supabase
       .from('workout_plans')
       .select(
@@ -66,7 +100,8 @@ export async function GET(req: Request) {
       `
       )
       .eq('plan_id', planId)
-      .maybeSingle();
+      .maybeSingle()
+      .returns<WorkoutPlan>();
 
     if (planErr)
       return NextResponse.json({ error: 'Failed to fetch plan details.' }, { status: 500 });
@@ -74,14 +109,13 @@ export async function GET(req: Request) {
     if (!plan)
       return NextResponse.json({ error: 'Plan not found.' }, { status: 404 });
 
-    // Compute duration_days
     const duration_days =
-      plan.plan_days?.length > 0
-        ? Math.max(...plan.plan_days.map((d: any) => d.day_number))
+      plan.plan_days && plan.plan_days.length
+        ? Math.max(...plan.plan_days.map((d) => d.day_number))
         : 0;
 
     return NextResponse.json({ ...plan, duration_days }, { status: 200 });
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { error: 'Unexpected error occurred while fetching plans.' },
       { status: 500 }
@@ -89,9 +123,17 @@ export async function GET(req: Request) {
   }
 }
 
+/** ---------- POST: apply a plan for a user ---------- **/
+
+interface ApplyPlanRequest {
+  user_id: number;
+  plan_id: number;
+  start_date: string;
+}
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body: ApplyPlanRequest = await req.json();
     const { user_id, plan_id, start_date } = body;
 
     if (!user_id || !plan_id || !start_date) {
@@ -136,7 +178,18 @@ export async function POST(req: Request) {
       `
       )
       .eq('plan_id', plan_id)
-      .order('day_number', { ascending: true });
+      .order('day_number', { ascending: true })
+      .returns<
+        {
+          plan_day_id: number;
+          day_number: number;
+          plan_day_exercises: {
+            exercise_id: number;
+            sets: number | null;
+            reps: number | null;
+          }[];
+        }[]
+      >();
 
     if (daysErr)
       return NextResponse.json({ error: 'Failed to fetch plan days.' }, { status: 500 });
@@ -144,14 +197,13 @@ export async function POST(req: Request) {
     if (!planDays || planDays.length === 0)
       return NextResponse.json({ error: 'Plan has no exercises.' }, { status: 404 });
 
-    // Create workout sessions and session details
+    // Create sessions & details
     const duration_days = Math.max(...planDays.map((d) => d.day_number));
 
     for (let dayNum = 1; dayNum <= duration_days; dayNum++) {
       const sessionDate = new Date(start_date);
       sessionDate.setDate(sessionDate.getDate() + dayNum - 1);
 
-      // Create workout session
       const { data: session, error: sessionErr } = await supabase
         .from('workout_sessions')
         .insert([
@@ -162,7 +214,7 @@ export async function POST(req: Request) {
           },
         ])
         .select()
-        .single();
+        .single<{ session_id: number }>();
 
       if (sessionErr)
         return NextResponse.json(
@@ -170,7 +222,6 @@ export async function POST(req: Request) {
           { status: 500 }
         );
 
-      // Insert exercises for this session
       const exercises =
         planDays.find((d) => d.day_number === dayNum)?.plan_day_exercises || [];
 
@@ -185,6 +236,7 @@ export async function POST(req: Request) {
               planned_reps: ex.reps,
             },
           ]);
+
         if (exErr)
           return NextResponse.json(
             { error: `Failed to add exercise for day ${dayNum}.` },
@@ -197,7 +249,7 @@ export async function POST(req: Request) {
       { message: 'Plan applied successfully. Workout sessions created.' },
       { status: 201 }
     );
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { error: 'Unexpected error occurred while applying plan.' },
       { status: 500 }
