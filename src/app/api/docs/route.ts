@@ -795,74 +795,66 @@ const spec = {
     "/summary": {
       get: {
         tags: ["Summary"],
-        summary: "Get user's summary data",
+        summary: "Get user's performance summary",
         description:
-          "Retrieve summary information including workout and nutrition data for a specific date range.",
+          "Generate and retrieve a user's workout and nutrition summary for a specified period (weekly or monthly), including aggregated metrics and daily breakdown.",
         parameters: [
           {
             name: "user_id",
             in: "query",
             required: true,
             type: "integer",
-            description: "ID of the user to get summary for",
+            description: "ID of the user to generate the summary for",
           },
           {
-            name: "start_date",
+            name: "period_type",
+            in: "query",
+            required: true,
+            type: "string",
+            enum: ["weekly", "monthly"],
+            description: "Type of summary period to generate",
+          },
+          {
+            name: "period_start",
             in: "query",
             required: true,
             type: "string",
             format: "date",
             description: "Start date for the summary period (YYYY-MM-DD)",
           },
-          {
-            name: "end_date",
-            in: "query",
-            required: true,
-            type: "string",
-            format: "date",
-            description: "End date for the summary period (YYYY-MM-DD)",
-          },
         ],
         responses: {
           200: {
-            description: "Successfully retrieved summary data",
+            description:
+              "Successfully generated and retrieved user summary data",
             schema: {
               type: "object",
               properties: {
-                workoutSummary: {
-                  type: "object",
-                  properties: {
-                    totalSessions: { type: "integer", example: 12 },
-                    completedSessions: { type: "integer", example: 10 },
-                    totalExercises: { type: "integer", example: 48 },
-                    topExercises: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          name: { type: "string", example: "Bench Press" },
-                          count: { type: "integer", example: 5 },
-                        },
+                total_workouts: { type: "integer", example: 8 },
+                total_calories_intake: { type: "number", example: 15430 },
+                avg_protein: { type: "number", example: 130 },
+                avg_carbs: { type: "number", example: 240 },
+                avg_fat: { type: "number", example: 65 },
+                total_duration_minutes: { type: "integer", example: 420 },
+                total_gr_score: { type: "number", example: 540 },
+                avg_gr_score: { type: "number", example: 77.1 },
+                dailyData: {
+                  type: "array",
+                  description: "Daily breakdown of workout and nutrition data",
+                  items: {
+                    type: "object",
+                    properties: {
+                      date: {
+                        type: "string",
+                        format: "date",
+                        example: "2025-10-21",
                       },
-                    },
-                  },
-                },
-                nutritionSummary: {
-                  type: "object",
-                  properties: {
-                    averageCalories: { type: "number", example: 2150.5 },
-                    averageProtein: { type: "number", example: 160.2 },
-                    averageCarbs: { type: "number", example: 220.8 },
-                    averageFat: { type: "number", example: 70.3 },
-                    topFoods: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          name: { type: "string", example: "Chicken Breast" },
-                          count: { type: "integer", example: 8 },
-                        },
-                      },
+                      calories: { type: "number", example: 2150 },
+                      protein: { type: "number", example: 140 },
+                      carbs: { type: "number", example: 230 },
+                      fat: { type: "number", example: 65 },
+                      workouts: { type: "integer", example: 1 },
+                      gr_score: { type: "number", example: 82 },
                     },
                   },
                 },
@@ -870,25 +862,26 @@ const spec = {
             },
           },
           400: {
-            description: "Missing required parameters or invalid date format",
+            description: "Missing or invalid query parameters",
             schema: {
               type: "object",
               properties: {
                 error: {
                   type: "string",
-                  example: "Missing required parameters or invalid date format",
+                  example:
+                    "Missing required parameters or invalid period type/date format",
                 },
               },
             },
           },
           500: {
-            description: "Server error while fetching summary data",
+            description: "Server error while generating summary data",
             schema: {
               type: "object",
               properties: {
                 error: {
                   type: "string",
-                  example: "Failed to fetch summary data",
+                  example: "Failed to generate summary data",
                 },
               },
             },
