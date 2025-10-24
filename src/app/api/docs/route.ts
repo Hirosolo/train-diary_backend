@@ -429,7 +429,7 @@ const spec = {
     // --- WORKOUT PLANS ---
     "/workout-plans": {
       get: {
-        tags: ["Plans"],
+        tags: ["Workout Plans"],
         summary: "Get all workout plans or plan details by ID",
         description:
           "Retrieve all workout plans (with duration in days) or detailed information about a specific plan using the `plan_id` query parameter.",
@@ -530,7 +530,7 @@ const spec = {
         },
       },
       post: {
-        tags: ["Plans"],
+        tags: ["Workout Plans"],
         summary: "Apply a workout plan for a user",
         description:
           "Assigns a workout plan to a user and automatically generates workout sessions and exercises according to the plan schedule.",
