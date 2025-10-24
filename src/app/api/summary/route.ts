@@ -12,11 +12,21 @@ import type {
 
 /** ---------- Helper: Generate summary data for a user ---------- **/
 
-async function generateSummaryPayload(
+async function generateSummary(
   user_id: number,
   period_type: "weekly" | "monthly",
   period_start: string
-) {
+): Promise<{
+  total_workouts: number;
+  total_calories_intake: number;
+  avg_protein: number;
+  avg_carbs: number;
+  avg_fat: number;
+  total_duration_minutes: number;
+  total_gr_score: number;
+  avg_gr_score: number;
+  dailyData: DailySummary[];
+}> {
   const periodDays = period_type === "weekly" ? 7 : 30;
 
   // Compute date range
@@ -266,7 +276,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const payload = await generateSummaryPayload(
+    const payload = await generateSummary(
       Number(user_id),
       period_type,
       period_start
@@ -299,7 +309,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const payload = await generateSummaryPayload(
+    const payload = await generateSummary(
       Number(user_id),
       period_type,
       period_start
