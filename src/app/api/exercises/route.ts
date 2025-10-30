@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server'
 import { supabase } from 'lib/supabaseClient'
 
+interface exerciseInformation{
+  name: string;
+  category: string;
+  default_sets: number;
+  default_reps: number;
+  description: string;
+}
+
 // get all exercises
 export async function GET() {
   const { data, error } = await supabase.from('exercises').select('*')
@@ -17,16 +25,16 @@ export async function GET() {
 
 // add exercise
 export async function POST(req: Request) {
-  const { name, category, default_sets, default_reps, description } = await req.json()
+  const newExercise:exerciseInformation = await req.json()
 
-  if (!name) {
+  if (!newExercise.name) {
     return NextResponse.json({ message: 'Exercise name is required.' }, { status: 400 })
   }
 
   const { data:existingExercise } = await supabase
     .from('exercises')
     .select('*')
-    .eq('name', name)
+    .eq('name', newExercise.name)
     .single()
 
   if (existingExercise) {
@@ -37,11 +45,11 @@ export async function POST(req: Request) {
     .from('exercises')
     .insert([
       {
-        name,
-        category: category || null,
-        default_sets: default_sets || null,
-        default_reps: default_reps || null,
-        description: description || null,
+        naem: newExercise.name,
+        category: newExercise.category || null,
+        default_sets: newExercise.default_sets || null,
+        default_reps: newExercise.default_reps || null,
+        description: newExercise.description || null,
       },
     ])
     .select()
