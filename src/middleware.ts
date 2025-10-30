@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const allowedOrigins = ['http://localhost:5173', 'https://train-diary.vercel.app']
+const allowedOrigins = ['http://localhost:5173', 'https://traindiary.vercel.app']
 
 export function middleware(request: NextRequest) {
   const origin = request.headers.get('origin') || ''
@@ -37,5 +37,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: '/api/:path*'
+  matcher: ['/api/:path*', '/auth/:path*']
 }

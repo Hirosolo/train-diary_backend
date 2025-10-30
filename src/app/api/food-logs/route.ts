@@ -46,8 +46,7 @@ interface DeleteMealRequest {
   meal_id: number;
 }
 
-/** ---------- API Handlers ---------- **/
-
+// get all foods or food by id
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
