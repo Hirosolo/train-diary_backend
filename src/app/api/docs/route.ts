@@ -7,11 +7,9 @@ const spec = {
     version: "1.0.0",
     description: "API documentation for Train Diary application",
   },
-  host:
-    process.env.NEXT_PUBLIC_API_URL?.replace(/^https?:\/\//, "") ||
-    "localhost:3000",
+  host: "train-diary-backend.vercel.app",
   basePath: "/api",
-  schemes: ["http", "https"],
+  schemes: ["https"],
   tags: [
     { name: "Authentication", description: "Authentication endpoints" },
     { name: "Exercises", description: "Exercise management endpoints" },
@@ -742,7 +740,14 @@ export async function GET() {
       </html>
     `;
 
-    return new Response(html, { headers: { "Content-Type": "text/html" } });
+    return new Response(html, { 
+      headers: { 
+        "Content-Type": "text/html",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization"
+      } 
+    });
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Unknown error occurred";
