@@ -16,7 +16,7 @@ export function middleware(request: NextRequest) {
       headers: {
         'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Access-Control-Allow-Credentials',
         'Access-Control-Allow-Credentials': 'true',
         'Access-Control-Max-Age': '86400', // 24 hours
       },
@@ -37,5 +37,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/:path*', '/auth/:path*', '/api/docs/:path*']
+  matcher: ['/api/:path*', '/auth/:path*', '/api/docs/:path*', '/api/auth/:path*']
 }
