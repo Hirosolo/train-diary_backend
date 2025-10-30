@@ -23,6 +23,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: 'Exercise name is required.' }, { status: 400 })
   }
 
+  const { data:existingExercise } = await supabase
+    .from('exercises')
+    .select('*')
+    .eq('name', name)
+    .single()
+
+  if (existingExercise) {
+    return NextResponse.json({ message: 'Exercise with this name already exists.' }, { status: 409 })
+  }
+
   const { data, error } = await supabase
     .from('exercises')
     .insert([
@@ -47,7 +57,7 @@ export async function POST(req: Request) {
   return NextResponse.json({ exercise_id: data.exercise_id, message: 'Exercise added.' }, { status: 201 })
 }
 
-// remove exercise by id
+// delete exercise by id
 export async function DELETE(req: Request) {
   const exercise_id = await req.json();
   if (!exercise_id) {
