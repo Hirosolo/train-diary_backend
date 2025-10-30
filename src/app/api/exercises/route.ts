@@ -64,6 +64,16 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ message: 'Exercise ID is required.' }, { status: 400 })
   }
 
+  const { data:existingExercise, error: fetchError } = await supabase
+  .from('exercises')
+  .select('*')
+  .eq('exercise_id', exercise_id)
+  .single()
+
+  if (!existingExercise) {
+    return NextResponse.json({ message: 'Exercise not found.' }, { status: 404 })
+  }
+
   const { error } = await supabase
     .from('exercises')
     .delete()
