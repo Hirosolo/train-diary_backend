@@ -10,6 +10,8 @@ import type {
   UserProgressSummary,
 } from "types/datatypes";
 
+
+
 /** ---------- Helper: Generate summary data for a user ---------- **/
 
 async function generateSummary(
@@ -27,6 +29,9 @@ async function generateSummary(
   avg_gr_score: number;
   dailyData: DailySummary[];
 }> {
+  console.log('Generating summary for:', { user_id, period_type, period_start });
+  console.log('\n[DEBUG] ====== FETCHING DATA FOR SUMMARY ======');
+  console.log('Period:', { type: period_type, start: period_start });
   const periodDays = period_type === "weekly" ? 7 : 30;
 
   // Compute date range
@@ -176,7 +181,7 @@ async function generateSummary(
   const avg_gr_score = workout_count > 0 ? total_gr_score / workout_count : 0;
 
   /** ---------- 5. Upsert summary record ---------- **/
-  const upsertPayload: UserProgressSummary = {
+  const upsertPayload = {
     user_id,
     period_type,
     period_start: startISO,
@@ -186,9 +191,7 @@ async function generateSummary(
     total_calories_intake,
     avg_protein,
     avg_carbs,
-    avg_fat,
-    total_gr_score,
-    avg_gr_score,
+    avg_fat
   };
 
   const { error: upsertErr } = await supabase
@@ -250,7 +253,7 @@ async function generateSummary(
     a.date.localeCompare(b.date)
   );
 
-  return {
+  const response = {
     total_workouts,
     total_calories_intake,
     avg_protein,
@@ -261,6 +264,23 @@ async function generateSummary(
     avg_gr_score,
     dailyData,
   };
+
+  console.log('Summary for period:', {
+    period: period_type,
+    start_date: period_start,
+    stats: {
+      total_workouts,
+      total_calories_intake,
+      avg_protein: `${avg_protein}g/day`,
+      avg_carbs: `${avg_carbs}g/day`,
+      avg_fat: `${avg_fat}g/day`,
+      total_gr_score,
+      avg_gr_score: `${avg_gr_score.toFixed(2)}`
+    },
+    dailyDataPoints: dailyData.length
+  });
+
+  return response;
 }
 
 /** ---------- POST: Generate new summary ---------- **/
@@ -276,6 +296,21 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check if user exists
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('user_id')
+      .eq('user_id', user_id)
+      .single();
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { message: "User not found." },
+        { status: 404 }
+      );
+    }
+
+    // Always generate fresh data for accurate summary
     const payload = await generateSummary(
       Number(user_id),
       period_type,
@@ -309,6 +344,21 @@ export async function GET(request: Request) {
       );
     }
 
+    // Check if user exists
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('user_id')
+      .eq('user_id', user_id)
+      .single();
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { message: "User not found." },
+        { status: 404 }
+      );
+    }
+
+    // Always generate fresh data for accurate graphs
     const payload = await generateSummary(
       Number(user_id),
       period_type,

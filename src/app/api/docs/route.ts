@@ -65,9 +65,9 @@ const spec = {
             schema: {
               type: "object",
               properties: {
-                email: { type: "string" },
-                password: { type: "string" },
-                name: { type: "string" },
+                username: { type: "string", example: "jack sparrow" },
+                email: { type: "string", example: "kingofthesea@gmail.com"},
+                password: { type: "string", example: "t123" },
               },
             },
           },

@@ -82,8 +82,6 @@ export interface UserProgressSummary {
   avg_protein?: number;
   avg_carbs?: number;
   avg_fat?: number;
-  total_gr_score?: number;
-  avg_gr_score?: number;
 }
 
 /** ---------- Daily Summary ---------- **/
