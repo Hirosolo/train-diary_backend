@@ -41,8 +41,8 @@ const spec = {
             schema: {
               type: "object",
               properties: {
-                email: { type: "string" },
-                password: { type: "string" },
+                email: { type: "string", example: "user@example.com" },
+                password: { type: "string", example: "password123" },
               },
             },
           },
@@ -100,8 +100,7 @@ const spec = {
                   default_reps: { type: "integer", example: 10 },
                   description: {
                     type: "string",
-                    example:
-                      "A compound exercise targeting the chest and triceps.",
+                    example: "A compound exercise targeting the chest and triceps.",
                   },
                 },
               },
@@ -128,8 +127,7 @@ const spec = {
                 default_reps: { type: "integer", example: 12 },
                 description: {
                   type: "string",
-                  example:
-                    "A compound lower body exercise targeting the quads and glutes.",
+                  example: "A compound lower body exercise targeting the quads and glutes.",
                 },
               },
             },
@@ -156,10 +154,15 @@ const spec = {
         parameters: [
           {
             in: "body",
-            name: "exercise_id",
+            name: "body",
             required: true,
-            type: "string",
-            description: "ID of the exercise to delete.",
+            schema: {
+              type: "object",
+              required: ["exercise_id"],
+              properties: {
+                exercise_id: { type: "string", example: "1" },
+              },
+            },
           },
         ],
         responses: {
@@ -178,7 +181,7 @@ const spec = {
       },
     },
 
-    // --- FOOD LOGS ---
+    // --- FOODS ---
     "/foods": {
       get: {
         tags: ["Foods"],
@@ -315,10 +318,7 @@ const spec = {
                           type: "object",
                           properties: {
                             name: { type: "string", example: "Rice" },
-                            calories_per_serving: {
-                              type: "number",
-                              example: 130,
-                            },
+                            calories_per_serving: { type: "number", example: 130 },
                           },
                         },
                       },
@@ -439,92 +439,11 @@ const spec = {
             in: "query",
             required: false,
             type: "integer",
-            description:
-              "Optional. ID of the plan to fetch detailed information for.",
+            description: "Optional. ID of the plan to fetch detailed information for.",
           },
         ],
         responses: {
-          200: {
-            description: "Successfully retrieved list or details of plans.",
-            schema: {
-              oneOf: [
-                {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      plan_id: { type: "integer", example: 1 },
-                      name: { type: "string", example: "Full Body Strength" },
-                      description: {
-                        type: "string",
-                        example: "A 4-day beginner-friendly workout split.",
-                      },
-                      duration_days: { type: "integer", example: 4 },
-                    },
-                  },
-                },
-                {
-                  type: "object",
-                  properties: {
-                    plan_id: { type: "integer", example: 1 },
-                    name: { type: "string", example: "Full Body Strength" },
-                    description: {
-                      type: "string",
-                      example: "A 4-day beginner-friendly workout split.",
-                    },
-                    duration_days: { type: "integer", example: 4 },
-                    plan_days: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          plan_day_id: { type: "integer", example: 10 },
-                          day_number: { type: "integer", example: 1 },
-                          day_type: { type: "string", example: "Upper Body" },
-                          plan_day_exercises: {
-                            type: "array",
-                            items: {
-                              type: "object",
-                              properties: {
-                                plan_day_exercise_id: {
-                                  type: "integer",
-                                  example: 5,
-                                },
-                                sets: { type: "integer", example: 4 },
-                                reps: { type: "integer", example: 10 },
-                                exercises: {
-                                  type: "object",
-                                  properties: {
-                                    exercise_id: {
-                                      type: "integer",
-                                      example: 2,
-                                    },
-                                    name: {
-                                      type: "string",
-                                      example: "Bench Press",
-                                    },
-                                    category: {
-                                      type: "string",
-                                      example: "Chest",
-                                    },
-                                    description: {
-                                      type: "string",
-                                      example:
-                                        "A compound movement targeting chest and triceps.",
-                                    },
-                                  },
-                                },
-                              },
-                            },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              ],
-            },
-          },
+          200: { description: "Successfully retrieved list or details of plans." },
           404: { description: "Plan not found." },
           500: { description: "Failed to fetch plans." },
         },
@@ -551,50 +470,10 @@ const spec = {
           },
         ],
         responses: {
-          201: {
-            description:
-              "Plan successfully applied. Workout sessions created for user.",
-            schema: {
-              type: "object",
-              properties: {
-                message: {
-                  type: "string",
-                  example:
-                    "Plan applied successfully. Workout sessions created.",
-                },
-              },
-            },
-          },
-          400: {
-            description: "Missing required fields or invalid input.",
-            schema: {
-              type: "object",
-              properties: {
-                error: {
-                  type: "string",
-                  example: "user_id, plan_id, and start_date are required.",
-                },
-              },
-            },
-          },
-          404: {
-            description: "User or plan not found, or plan has no exercises.",
-            schema: {
-              type: "object",
-              properties: {
-                error: { type: "string", example: "Plan not found." },
-              },
-            },
-          },
-          500: {
-            description: "Server or database error while applying the plan.",
-            schema: {
-              type: "object",
-              properties: {
-                error: { type: "string", example: "Failed to apply plan." },
-              },
-            },
-          },
+          201: { description: "Plan successfully applied. Workout sessions created for user." },
+          400: { description: "Missing required fields or invalid input." },
+          404: { description: "User or plan not found, or plan has no exercises." },
+          500: { description: "Server or database error while applying the plan." },
         },
       },
     },
@@ -604,8 +483,7 @@ const spec = {
       get: {
         tags: ["Workout Sessions"],
         summary: "Get workout sessions or session details",
-        description:
-          "Fetch all workout sessions for a user, or details for a specific session.",
+        description: "Fetch all workout sessions for a user, or details for a specific session.",
         parameters: [
           {
             name: "user_id",
@@ -621,23 +499,7 @@ const spec = {
           },
         ],
         responses: {
-          200: {
-            description: "Successfully fetched sessions or session details.",
-            schema: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  session_id: { type: "integer", example: 1 },
-                  user_id: { type: "integer", example: 5 },
-                  scheduled_date: { type: "string", example: "2025-10-23" },
-                  type: { type: "string", example: "Strength" },
-                  notes: { type: "string", example: "Upper body day" },
-                  completed: { type: "boolean", example: false },
-                },
-              },
-            },
-          },
+          200: { description: "Successfully fetched sessions or session details." },
           400: { description: "Missing user_id or session_id." },
           500: { description: "Failed to fetch sessions or details." },
         },
@@ -645,86 +507,70 @@ const spec = {
 
       post: {
         tags: ["Workout Sessions"],
-        summary: "Create session / add exercises / log workout",
-        description:
-          "Depending on the payload, this endpoint can create a new session, add exercises to a session, or log actual workout results.",
+        summary: "Create session / Add exercises / Log workout",
+        description: "Multi-purpose endpoint that supports three different operations:\n\n**1. Create New Session** - Provide `user_id` and `scheduled_date`\n**2. Add Exercises** - Provide `session_id` and `exercises` array\n**3. Log Workout** - Provide `session_detail_id` and `log` object",
         parameters: [
           {
             in: "body",
             name: "body",
             required: true,
             schema: {
-              oneOf: [
-                {
-                  type: "object",
-                  required: ["user_id", "scheduled_date"],
-                  properties: {
-                    user_id: { type: "integer", example: 1 },
-                    scheduled_date: { type: "string", example: "2025-10-23" },
-                    type: { type: "string", example: "Cardio" },
-                    notes: { type: "string", example: "Morning run" },
-                  },
-                },
-                {
-                  type: "object",
-                  required: ["session_id", "exercises"],
-                  properties: {
-                    session_id: { type: "integer", example: 3 },
-                    exercises: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        required: [
-                          "exercise_id",
-                          "planned_sets",
-                          "planned_reps",
-                        ],
-                        properties: {
-                          exercise_id: { type: "integer", example: 7 },
-                          planned_sets: { type: "integer", example: 3 },
-                          planned_reps: { type: "integer", example: 12 },
-                        },
-                      },
-                    },
-                  },
-                },
-                {
-                  type: "object",
-                  required: ["session_detail_id", "log"],
-                  properties: {
-                    session_detail_id: { type: "integer", example: 12 },
-                    log: {
-                      type: "object",
-                      required: ["actual_sets", "actual_reps"],
-                      properties: {
-                        actual_sets: { type: "integer", example: 3 },
-                        actual_reps: { type: "integer", example: 10 },
-                        weight_kg: { type: "number", example: 60 },
-                        duration_seconds: { type: "integer", example: 1800 },
-                        notes: { type: "string", example: "Felt strong" },
-                      },
-                    },
-                  },
-                },
-              ],
+              type: "object",
+              properties: {
+                user_id: { type: "integer" },
+                scheduled_date: { type: "string" },
+                type: { type: "string" },
+                notes: { type: "string" },
+                session_id: { type: "integer" },
+                exercises: { type: "array" },
+                session_detail_id: { type: "integer" },
+                log: { type: "object" },
+              },
             },
+            examples: {
+              "Create Session": {
+                value: {
+                  user_id: 1,
+                  scheduled_date: "2025-10-23",
+                  type: "Strength",
+                  notes: "Upper body focus"
+                }
+              },
+              "Add Exercises": {
+                value: {
+                  session_id: 5,
+                  exercises: [
+                    {
+                      exercise_id: 1,
+                      planned_sets: 3,
+                      planned_reps: 12
+                    },
+                    {
+                      exercise_id: 2,
+                      planned_sets: 4,
+                      planned_reps: 10
+                    }
+                  ]
+                }
+              },
+              "Log Workout": {
+                value: {
+                  session_detail_id: 12,
+                  log: {
+                    actual_sets: 3,
+                    actual_reps: 12,
+                    weight_kg: 70.5,
+                    notes: "Felt strong today"
+                  }
+                }
+              }
+            }
           },
         ],
         responses: {
-          201: {
-            description: "Created successfully (session, exercises, or log).",
-            schema: {
-              type: "object",
-              properties: {
-                message: {
-                  type: "string",
-                  example: "Workout logged successfully.",
-                },
-              },
-            },
-          },
-          400: { description: "Invalid or missing required fields." },
-          500: { description: "Failed to create or update session." },
+          201: { description: "Operation successful" },
+          400: { description: "Invalid request" },
+          500: { description: "Server error" },
         },
       },
 
@@ -755,8 +601,7 @@ const spec = {
       delete: {
         tags: ["Workout Sessions"],
         summary: "Delete session, exercise, or log",
-        description:
-          "Deletes a workout session (and its details/logs), a single exercise, or a specific log entry.",
+        description: "Deletes a workout session (and its details/logs), a single exercise, or a specific log entry.",
         parameters: [
           {
             in: "body",
@@ -773,18 +618,7 @@ const spec = {
           },
         ],
         responses: {
-          200: {
-            description: "Successfully deleted session, exercise, or log.",
-            schema: {
-              type: "object",
-              properties: {
-                message: {
-                  type: "string",
-                  example: "Session deleted successfully.",
-                },
-              },
-            },
-          },
+          200: { description: "Successfully deleted session, exercise, or log." },
           400: { description: "Invalid delete parameters." },
           500: { description: "Failed to delete record." },
         },
@@ -824,74 +658,10 @@ const spec = {
           },
         ],
         responses: {
-          200: {
-            description:
-              "Successfully generated and retrieved user summary data",
-            schema: {
-              type: "object",
-              properties: {
-                total_workouts: { type: "integer", example: 8 },
-                total_calories_intake: { type: "number", example: 15430 },
-                avg_protein: { type: "number", example: 130 },
-                avg_carbs: { type: "number", example: 240 },
-                avg_fat: { type: "number", example: 65 },
-                total_duration_minutes: { type: "integer", example: 420 },
-                total_gr_score: { type: "number", example: 540 },
-                avg_gr_score: { type: "number", example: 77.1 },
-                dailyData: {
-                  type: "array",
-                  description: "Daily breakdown of workout and nutrition data",
-                  items: {
-                    type: "object",
-                    properties: {
-                      date: {
-                        type: "string",
-                        format: "date",
-                        example: "2025-10-21",
-                      },
-                      calories: { type: "number", example: 2150 },
-                      protein: { type: "number", example: 140 },
-                      carbs: { type: "number", example: 230 },
-                      fat: { type: "number", example: 65 },
-                      workouts: { type: "integer", example: 1 },
-                      gr_score: { type: "number", example: 82 },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          400: {
-            description: "Missing or invalid query parameters",
-            schema: {
-              type: "object",
-              properties: {
-                message: {
-                  type: "string",
-                  example: "user_id, period_type, and period_start are required.",
-                },
-              },
-            },
-          },
-          404: {
-            description: "User not found",
-            schema: {
-              type: "object",
-              properties: {
-                message: { type: "string", example: "User not found." },
-              },
-            },
-          },
-          500: {
-            description: "Server error while generating summary data",
-            schema: {
-              type: "object",
-              properties: {
-                message: { type: "string", example: "Failed to generate summary." },
-                error: { type: "string" },
-              },
-            },
-          },
+          200: { description: "Successfully generated and retrieved user summary data" },
+          400: { description: "Missing or invalid query parameters" },
+          404: { description: "User not found" },
+          500: { description: "Server error while generating summary data" },
         },
       },
       post: {
@@ -908,91 +678,21 @@ const spec = {
               required: ["user_id", "period_type", "period_start"],
               properties: {
                 user_id: { type: "integer", example: 1 },
-                period_type: { 
-                  type: "string", 
-                  enum: ["weekly", "monthly"],
-                  example: "weekly"
-                },
-                period_start: { 
-                  type: "string", 
-                  format: "date",
-                  example: "2025-10-23"
-                },
+                period_type: { type: "string", enum: ["weekly", "monthly"], example: "weekly" },
+                period_start: { type: "string", format: "date", example: "2025-10-23" },
               },
             },
           },
         ],
         responses: {
-          201: {
-            description: "Successfully generated new summary",
-            schema: {
-              type: "object",
-              properties: {
-                total_workouts: { type: "integer", example: 8 },
-                total_calories_intake: { type: "number", example: 15430 },
-                avg_protein: { type: "number", example: 130 },
-                avg_carbs: { type: "number", example: 240 },
-                avg_fat: { type: "number", example: 65 },
-                total_duration_minutes: { type: "integer", example: 420 },
-                total_gr_score: { type: "number", example: 540 },
-                avg_gr_score: { type: "number", example: 77.1 },
-                dailyData: {
-                  type: "array",
-                  description: "Daily breakdown of workout and nutrition data",
-                  items: {
-                    type: "object",
-                    properties: {
-                      date: {
-                        type: "string",
-                        format: "date",
-                        example: "2025-10-21",
-                      },
-                      calories: { type: "number", example: 2150 },
-                      protein: { type: "number", example: 140 },
-                      carbs: { type: "number", example: 230 },
-                      fat: { type: "number", example: 65 },
-                      workouts: { type: "integer", example: 1 },
-                      gr_score: { type: "number", example: 82 },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          400: {
-            description: "Missing or invalid parameters",
-            schema: {
-              type: "object",
-              properties: {
-                message: {
-                  type: "string",
-                  example: "user_id, period_type, and period_start are required.",
-                },
-              },
-            },
-          },
-          404: {
-            description: "User not found",
-            schema: {
-              type: "object",
-              properties: {
-                message: { type: "string", example: "User not found." },
-              },
-            },
-          },
-          500: {
-            description: "Server error",
-            schema: {
-              type: "object",
-              properties: {
-                message: { type: "string", example: "Failed to generate summary." },
-                error: { type: "string" },
-              },
-            },
-          },
+          201: { description: "Successfully generated new summary" },
+          400: { description: "Missing or invalid parameters" },
+          404: { description: "User not found" },
+          500: { description: "Server error" },
         },
       },
     },
+
     // --- PROGRESS ---
     "/progress": {
       get: {
@@ -1000,45 +700,8 @@ const spec = {
         summary: "Get all user progress summaries",
         description: "Retrieve all stored progress summaries ordered by period start date",
         responses: {
-          200: {
-            description: "Successfully retrieved progress summaries",
-            schema: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  summary_id: { type: "integer", example: 1 },
-                  user_id: { type: "integer", example: 1 },
-                  period_type: { 
-                    type: "string", 
-                    enum: ["weekly", "monthly"],
-                    example: "weekly"
-                  },
-                  period_start: { 
-                    type: "string", 
-                    format: "date",
-                    example: "2025-10-23"
-                  },
-                  total_workouts: { type: "integer", example: 8 },
-                  total_calories_burned: { type: "number", example: 0 },
-                  avg_duration_minutes: { type: "number", example: 420 },
-                  total_calories_intake: { type: "number", example: 15430 },
-                  avg_protein: { type: "number", example: 130 },
-                  avg_carbs: { type: "number", example: 240 },
-                  avg_fat: { type: "number", example: 65 },
-                },
-              },
-            },
-          },
-          500: {
-            description: "Server error while retrieving summaries",
-            schema: {
-              type: "object",
-              properties: {
-                error: { type: "string" },
-              },
-            },
-          },
+          200: { description: "Successfully retrieved progress summaries" },
+          500: { description: "Server error while retrieving summaries" },
         },
       },
     },
@@ -1051,10 +714,13 @@ export async function GET() {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>API Documentation</title>
+          <title>Train Diary API Documentation</title>
           <meta charset="utf-8"/>
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
+          <style>
+            .swagger-ui .examples-select { margin-bottom: 10px; }
+          </style>
         </head>
         <body>
           <div id="swagger-ui"></div>
