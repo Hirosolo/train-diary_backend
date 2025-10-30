@@ -866,11 +866,19 @@ const spec = {
             schema: {
               type: "object",
               properties: {
-                error: {
+                message: {
                   type: "string",
-                  example:
-                    "Missing required parameters or invalid period type/date format",
+                  example: "user_id, period_type, and period_start are required.",
                 },
+              },
+            },
+          },
+          404: {
+            description: "User not found",
+            schema: {
+              type: "object",
+              properties: {
+                message: { type: "string", example: "User not found." },
               },
             },
           },
@@ -879,10 +887,155 @@ const spec = {
             schema: {
               type: "object",
               properties: {
-                error: {
-                  type: "string",
-                  example: "Failed to generate summary data",
+                message: { type: "string", example: "Failed to generate summary." },
+                error: { type: "string" },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        tags: ["Summary"],
+        summary: "Generate new user summary",
+        description: "Generate a new summary for a user's workout and nutrition data for a specified period.",
+        parameters: [
+          {
+            in: "body",
+            name: "body",
+            required: true,
+            schema: {
+              type: "object",
+              required: ["user_id", "period_type", "period_start"],
+              properties: {
+                user_id: { type: "integer", example: 1 },
+                period_type: { 
+                  type: "string", 
+                  enum: ["weekly", "monthly"],
+                  example: "weekly"
                 },
+                period_start: { 
+                  type: "string", 
+                  format: "date",
+                  example: "2025-10-23"
+                },
+              },
+            },
+          },
+        ],
+        responses: {
+          201: {
+            description: "Successfully generated new summary",
+            schema: {
+              type: "object",
+              properties: {
+                total_workouts: { type: "integer", example: 8 },
+                total_calories_intake: { type: "number", example: 15430 },
+                avg_protein: { type: "number", example: 130 },
+                avg_carbs: { type: "number", example: 240 },
+                avg_fat: { type: "number", example: 65 },
+                total_duration_minutes: { type: "integer", example: 420 },
+                total_gr_score: { type: "number", example: 540 },
+                avg_gr_score: { type: "number", example: 77.1 },
+                dailyData: {
+                  type: "array",
+                  description: "Daily breakdown of workout and nutrition data",
+                  items: {
+                    type: "object",
+                    properties: {
+                      date: {
+                        type: "string",
+                        format: "date",
+                        example: "2025-10-21",
+                      },
+                      calories: { type: "number", example: 2150 },
+                      protein: { type: "number", example: 140 },
+                      carbs: { type: "number", example: 230 },
+                      fat: { type: "number", example: 65 },
+                      workouts: { type: "integer", example: 1 },
+                      gr_score: { type: "number", example: 82 },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: "Missing or invalid parameters",
+            schema: {
+              type: "object",
+              properties: {
+                message: {
+                  type: "string",
+                  example: "user_id, period_type, and period_start are required.",
+                },
+              },
+            },
+          },
+          404: {
+            description: "User not found",
+            schema: {
+              type: "object",
+              properties: {
+                message: { type: "string", example: "User not found." },
+              },
+            },
+          },
+          500: {
+            description: "Server error",
+            schema: {
+              type: "object",
+              properties: {
+                message: { type: "string", example: "Failed to generate summary." },
+                error: { type: "string" },
+              },
+            },
+          },
+        },
+      },
+    },
+    // --- PROGRESS ---
+    "/progress": {
+      get: {
+        tags: ["Summary"],
+        summary: "Get all user progress summaries",
+        description: "Retrieve all stored progress summaries ordered by period start date",
+        responses: {
+          200: {
+            description: "Successfully retrieved progress summaries",
+            schema: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  summary_id: { type: "integer", example: 1 },
+                  user_id: { type: "integer", example: 1 },
+                  period_type: { 
+                    type: "string", 
+                    enum: ["weekly", "monthly"],
+                    example: "weekly"
+                  },
+                  period_start: { 
+                    type: "string", 
+                    format: "date",
+                    example: "2025-10-23"
+                  },
+                  total_workouts: { type: "integer", example: 8 },
+                  total_calories_burned: { type: "number", example: 0 },
+                  avg_duration_minutes: { type: "number", example: 420 },
+                  total_calories_intake: { type: "number", example: 15430 },
+                  avg_protein: { type: "number", example: 130 },
+                  avg_carbs: { type: "number", example: 240 },
+                  avg_fat: { type: "number", example: 65 },
+                },
+              },
+            },
+          },
+          500: {
+            description: "Server error while retrieving summaries",
+            schema: {
+              type: "object",
+              properties: {
+                error: { type: "string" },
               },
             },
           },
