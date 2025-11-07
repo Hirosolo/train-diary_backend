@@ -11,56 +11,90 @@ import { supabase } from 'lib/supabaseClient';
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const user_id = searchParams.get('user_id');
-    const session_id = searchParams.get('session_id');
+    const user_id = searchParams.get("user_id");
+    const session_id = searchParams.get("session_id");
 
     if (!user_id && !session_id) {
       return NextResponse.json(
-        { error: 'user_id or session_id required.' },
+        { error: "user_id or session_id required." },
         { status: 400 }
       );
     }
 
-    // Fetch all sessions for a user
+    // Fetch all workout sessions for a specific user
     if (user_id) {
       const { data, error } = await supabase
-        .from('workout_sessions')
-        .select('*')
-        .eq('user_id', user_id)
-        .order('scheduled_date', { ascending: false });
+        .from("workout_sessions")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("scheduled_date", { ascending: false });
 
-      if (error)
-        return NextResponse.json({ error: 'Failed to fetch sessions.' }, { status: 500 });
+      if (error) {
+        console.error("Error fetching sessions:", error.message);
+        return NextResponse.json(
+          { message: "Failed to fetch sessions." },
+          { status: 500 }
+        );
+      }
 
-      return NextResponse.json(data, { status: 200 });
+      return NextResponse.json({ sessions: data }, { status: 200 });
     }
 
-    // Fetch full session details
+    // Fetch full session details (with exercises + logs)
     if (session_id) {
-      const { data, error } = await supabase
-        .from('session_details')
+      // 1️⃣ Get session details
+      const { data: details, error: detailsError } = await supabase
+        .from("session_details")
         .select(`
           session_detail_id,
+          session_id,
           exercise_id,
           planned_sets,
           planned_reps,
           exercises(name, category, description)
         `)
-        .eq('session_id', session_id);
+        .eq("session_id", session_id);
 
-      if (error)
-        return NextResponse.json({ error: 'Failed to fetch session details.' }, { status: 500 });
+      if (detailsError) {
+        console.error("Error fetching session details:", detailsError.message);
+        return NextResponse.json(
+          { message: "Failed to fetch session details." },
+          { status: 500 }
+        );
+      }
 
-      return NextResponse.json(data, { status: 200 });
+      //  Get logs for all session_detail_ids
+      const detailIds = details.map((d) => d.session_detail_id);
+
+      let logs = [];
+      if (detailIds.length > 0) {
+        const { data: logData, error: logsError } = await supabase
+          .from("exercise_logs")
+          .select("*")
+          .in("session_detail_id", detailIds);
+
+        if (logsError) {
+          console.error("Error fetching exercise logs:", logsError.message);
+          return NextResponse.json(
+            { message: "Failed to fetch exercise logs." },
+            { status: 500 }
+          );
+        }
+
+        logs = logData;
+      }
+
+      // Return both details and logs
+      return NextResponse.json({ details, logs }, { status: 200 });
     }
-  } catch {
+  } catch (err) {
+    console.error("Unexpected error:", err);
     return NextResponse.json(
-      { error: 'Unexpected error occurred while fetching sessions.' },
+      { message: "Unexpected error occurred while fetching sessions." },
       { status: 500 }
     );
   }
 }
-
 // ==================== POST ====================
 // Create a workout session or log exercises
 export async function POST(req: Request) {

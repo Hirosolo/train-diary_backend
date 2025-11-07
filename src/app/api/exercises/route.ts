@@ -15,7 +15,7 @@ export async function GET() {
 
   if (error) {
     return NextResponse.json(
-      { data:[], message: 'Failed to fetch exercises.', error: error.message },
+      { data: [], message: 'Failed to fetch exercises.', error: error.message },
       { status: 500 }
     )
   }
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     .from('exercises')
     .insert([
       {
-        naem: newExercise.name,
+        name: newExercise.name,
         category: newExercise.category || null,
         default_sets: newExercise.default_sets || null,
         default_reps: newExercise.default_reps || null,
