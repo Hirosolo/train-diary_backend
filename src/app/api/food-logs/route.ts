@@ -3,6 +3,17 @@ import { supabase } from 'lib/supabaseClient';
 
 /** ---------- Type Definitions ---------- **/
 
+interface Food {
+  food_id: number;
+  name: string;
+  calories_per_serving: number;
+  protein_per_serving: number;
+  carbs_per_serving: number;
+  fat_per_serving: number;
+  serving_type: string;
+  image?: string;
+}
+
 interface FoodInput {
   food_id: number;
   amount_grams: number;
@@ -12,6 +23,7 @@ interface FoodDetail {
   meal_detail_id: number;
   amount_grams: number;
   foods: {
+    food_id?: number;
     name: string;
     calories_per_serving: number;
     protein_per_serving: number;
@@ -46,44 +58,38 @@ interface DeleteMealRequest {
   meal_id: number;
 }
 
-// get all foods or food by id
+/** ---------- GET: Fetch all foods or specific food ---------- **/
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const mealId = searchParams.get('meal_id');
+    const foodId = searchParams.get("food_id");
 
-    let query = supabase
-      .from('user_meals')
-      .select(`
-        meal_id,
-        user_id,
-        meal_type,
-        log_date,
-        user_meal_details(
-          meal_detail_id,
-          amount_grams,
-          foods(name, calories_per_serving, protein_per_serving, carbs_per_serving, fat_per_serving)
-        )
-      `);
+    let query = supabase.from("foods").select("*").order("name", { ascending: true });
+    if (foodId) query = query.eq("food_id", foodId);
 
-    if (mealId) query = query.eq('meal_id', mealId);
+    const { data, error } = await query.returns<Food[]>();
 
-    const { data, error } = await query.returns<UserMeal[]>();
+    if (error) {
+      console.error("Supabase error:", error.message);
+      return NextResponse.json({ error: "Failed to fetch foods." }, { status: 500 });
+    }
 
-    if (error)
-      return NextResponse.json({ error: 'Failed to fetch food logs.' }, { status: 500 });
-
-    if (mealId && (!data || data.length === 0))
-      return NextResponse.json({ error: 'Food log not found.' }, { status: 404 });
+    if (foodId && (!data || data.length === 0)) {
+      return NextResponse.json({ error: "Food not found." }, { status: 404 });
+    }
 
     return NextResponse.json(data, { status: 200 });
-  } catch {
+  } catch (err) {
+    console.error("Unexpected error fetching foods:", err);
     return NextResponse.json(
-      { error: 'Unexpected error occurred while fetching food logs.' },
+      { error: "Unexpected error occurred while fetching foods." },
       { status: 500 }
     );
   }
 }
+
+/** ---------- POST: Create new meal log ---------- **/
 
 export async function POST(req: Request) {
   try {
@@ -92,15 +98,15 @@ export async function POST(req: Request) {
 
     if (!user_id || !meal_type || !log_date || !foods?.length) {
       return NextResponse.json(
-        { error: 'Missing required fields: user_id, meal_type, log_date, or foods.' },
+        { error: "Missing required fields: user_id, meal_type, log_date, or foods." },
         { status: 400 }
       );
     }
 
     const { data: existingUser } = await supabase
-      .from('users')
-      .select('user_id')
-      .eq('user_id', user_id)
+      .from("users")
+      .select("user_id")
+      .eq("user_id", user_id)
       .maybeSingle();
 
     if (!existingUser)
@@ -110,13 +116,13 @@ export async function POST(req: Request) {
       );
 
     const { data: meal, error: mealErr } = await supabase
-      .from('user_meals')
+      .from("user_meals")
       .insert([{ user_id, meal_type, log_date }])
       .select()
       .single();
 
     if (mealErr)
-      return NextResponse.json({ error: 'Failed to create meal log.' }, { status: 500 });
+      return NextResponse.json({ error: "Failed to create meal log." }, { status: 500 });
 
     const details = foods.map((f) => ({
       meal_id: meal.meal_id,
@@ -124,21 +130,24 @@ export async function POST(req: Request) {
       amount_grams: f.amount_grams,
     }));
 
-    const { error: detailsErr } = await supabase.from('user_meal_details').insert(details);
+    const { error: detailsErr } = await supabase.from("user_meal_details").insert(details);
     if (detailsErr)
-      return NextResponse.json({ error: 'Failed to add food details.' }, { status: 500 });
+      return NextResponse.json({ error: "Failed to add food details." }, { status: 500 });
 
     return NextResponse.json(
-      { message: 'Food log created successfully.', data: meal },
+      { message: "Food log created successfully.", data: meal },
       { status: 200 }
     );
-  } catch {
+  } catch (err) {
+    console.error("POST /food-logs error:", err);
     return NextResponse.json(
-      { error: 'Unexpected error occurred while creating food log.' },
+      { error: "Unexpected error occurred while creating food log." },
       { status: 500 }
     );
   }
 }
+
+/** ---------- PUT: Update existing meal log ---------- **/
 
 export async function PUT(req: Request) {
   try {
@@ -146,49 +155,56 @@ export async function PUT(req: Request) {
     const { meal_id, meal_type, log_date, foods } = body;
 
     if (!meal_id)
-      return NextResponse.json({ error: 'Missing meal_id for update.' }, { status: 400 });
+      return NextResponse.json({ error: "Missing meal_id for update." }, { status: 400 });
 
     const { data: existingMeal } = await supabase
-      .from('user_meals')
-      .select('meal_id')
-      .eq('meal_id', meal_id)
+      .from("user_meals")
+      .select("meal_id")
+      .eq("meal_id", meal_id)
       .maybeSingle();
 
     if (!existingMeal)
-      return NextResponse.json({ error: 'Meal not found.' }, { status: 404 });
+      return NextResponse.json({ error: "Meal not found." }, { status: 404 });
 
     const { error: mealErr } = await supabase
-      .from('user_meals')
+      .from("user_meals")
       .update({ meal_type, log_date })
-      .eq('meal_id', meal_id);
+      .eq("meal_id", meal_id);
 
     if (mealErr)
-      return NextResponse.json({ error: 'Failed to update meal log.' }, { status: 500 });
+      return NextResponse.json({ error: "Failed to update meal log." }, { status: 500 });
 
     if (foods?.length) {
-      await supabase.from('user_meal_details').delete().eq('meal_id', meal_id);
+      await supabase.from("user_meal_details").delete().eq("meal_id", meal_id);
+
       const newDetails = foods.map((f) => ({
         meal_id,
         food_id: f.food_id,
         amount_grams: f.amount_grams,
       }));
 
-      const { error: detailsErr } = await supabase.from('user_meal_details').insert(newDetails);
+      const { error: detailsErr } = await supabase
+        .from("user_meal_details")
+        .insert(newDetails);
+
       if (detailsErr)
-        return NextResponse.json({ error: 'Failed to update food details.' }, { status: 500 });
+        return NextResponse.json({ error: "Failed to update food details." }, { status: 500 });
     }
 
     return NextResponse.json(
-      { message: 'Food log updated successfully.' },
+      { message: "Food log updated successfully." },
       { status: 200 }
     );
-  } catch {
+  } catch (err) {
+    console.error("PUT /food-logs error:", err);
     return NextResponse.json(
-      { error: 'Unexpected error occurred while updating food log.' },
+      { error: "Unexpected error occurred while updating food log." },
       { status: 500 }
     );
   }
 }
+
+/** ---------- DELETE: Delete meal log ---------- **/
 
 export async function DELETE(req: Request) {
   try {
@@ -196,30 +212,31 @@ export async function DELETE(req: Request) {
     const { meal_id } = body;
 
     if (!meal_id)
-      return NextResponse.json({ error: 'Missing meal_id for delete.' }, { status: 400 });
+      return NextResponse.json({ error: "Missing meal_id for delete." }, { status: 400 });
 
     const { data: existingMeal } = await supabase
-      .from('user_meals')
-      .select('meal_id')
-      .eq('meal_id', meal_id)
+      .from("user_meals")
+      .select("meal_id")
+      .eq("meal_id", meal_id)
       .maybeSingle();
 
     if (!existingMeal)
-      return NextResponse.json({ error: 'Meal not found.' }, { status: 404 });
+      return NextResponse.json({ error: "Meal not found." }, { status: 404 });
 
-    await supabase.from('user_meal_details').delete().eq('meal_id', meal_id);
-    const { error } = await supabase.from('user_meals').delete().eq('meal_id', meal_id);
+    await supabase.from("user_meal_details").delete().eq("meal_id", meal_id);
+    const { error } = await supabase.from("user_meals").delete().eq("meal_id", meal_id);
 
     if (error)
-      return NextResponse.json({ error: 'Failed to delete meal log.' }, { status: 500 });
+      return NextResponse.json({ error: "Failed to delete meal log." }, { status: 500 });
 
     return NextResponse.json(
-      { message: 'Food log deleted successfully.' },
+      { message: "Food log deleted successfully." },
       { status: 200 }
     );
-  } catch {
+  } catch (err) {
+    console.error("DELETE /food-logs error:", err);
     return NextResponse.json(
-      { error: 'Unexpected error occurred while deleting food log.' },
+      { error: "Unexpected error occurred while deleting food log." },
       { status: 500 }
     );
   }
