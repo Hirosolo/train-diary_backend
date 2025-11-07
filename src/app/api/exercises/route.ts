@@ -15,7 +15,7 @@ export async function GET() {
 
   if (error) {
     return NextResponse.json(
-      { message: 'Failed to fetch exercises.', error: error.message },
+      { data:[], message: 'Failed to fetch exercises.', error: error.message },
       { status: 500 }
     )
   }

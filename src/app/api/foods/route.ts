@@ -39,9 +39,8 @@ export interface DeleteFoodRequest {
   food_id: number;
 }
 
-/** ---------- API Handlers ---------- **/
 
-// GET: fetch all foods or one by ?food_id
+// fetch all foods or one by ?food_id
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -69,7 +68,7 @@ export async function GET(req: Request) {
   }
 }
 
-// POST: create a new food
+// create a new food
 export async function POST(req: Request) {
   try {
     const body: CreateFoodRequest = await req.json();
