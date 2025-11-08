@@ -63,31 +63,81 @@ interface DeleteMealRequest {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const foodId = searchParams.get("food_id");
+    const userId = searchParams.get("user_id");
+    const mealId = searchParams.get("meal_id");
 
-    let query = supabase.from("foods").select("*").order("name", { ascending: true });
-    if (foodId) query = query.eq("food_id", foodId);
+    const selectQuery = `
+      meal_id,
+      user_id,
+      meal_type,
+      log_date,
+      user_meal_details(
+        meal_detail_id,
+        amount_grams,
+        foods(
+          food_id,
+          name,
+          calories_per_serving,
+          protein_per_serving,
+          carbs_per_serving,
+          fat_per_serving
+        )
+      )
+    `;
 
-    const { data, error } = await query.returns<Food[]>();
+    let query = supabase
+      .from("user_meals")
+      .select(selectQuery)
+      .order("log_date", { ascending: false });
+
+    if (userId) query = query.eq("user_id", userId);
+    if (mealId) query = query.eq("meal_id", mealId);
+
+    // 👇 Avoid type mismatch issue: use `overrideTypes` (new API) or just let it infer as `any`
+    const { data, error } = await query;
 
     if (error) {
-      console.error("Supabase error:", error.message);
-      return NextResponse.json({ error: "Failed to fetch foods." }, { status: 500 });
+      console.error("Supabase error fetching meals:", error.message);
+      return NextResponse.json({ error: "Failed to fetch meals." }, { status: 500 });
     }
 
-    if (foodId && (!data || data.length === 0)) {
-      return NextResponse.json({ error: "Food not found." }, { status: 404 });
+    if (!data || !Array.isArray(data)) {
+      return NextResponse.json([], { status: 200 });
     }
 
-    return NextResponse.json(data, { status: 200 });
+    const rows: UserMeal[] = data.map((row: any) => {
+      const details = (row.user_meal_details || []).map((d: any) => ({
+        meal_detail_id: d.meal_detail_id,
+        amount_grams: d.amount_grams,
+        foods: {
+          food_id: d.foods?.food_id,
+          name: d.foods?.name,
+          calories_per_serving: d.foods?.calories_per_serving,
+          protein_per_serving: d.foods?.protein_per_serving,
+          carbs_per_serving: d.foods?.carbs_per_serving,
+          fat_per_serving: d.foods?.fat_per_serving,
+        },
+      }));
+
+      return {
+        meal_id: row.meal_id,
+        user_id: row.user_id,
+        meal_type: row.meal_type || "unknown",
+        log_date: row.log_date,
+        user_meal_details: details,
+      };
+    });
+
+    return NextResponse.json(rows, { status: 200 });
   } catch (err) {
-    console.error("Unexpected error fetching foods:", err);
+    console.error("Unexpected error fetching meals:", err);
     return NextResponse.json(
-      { error: "Unexpected error occurred while fetching foods." },
+      { error: "Unexpected error occurred while fetching meals." },
       { status: 500 }
     );
   }
 }
+
 
 /** ---------- POST: Create new meal log ---------- **/
 
