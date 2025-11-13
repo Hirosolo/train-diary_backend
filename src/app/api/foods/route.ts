@@ -60,8 +60,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Food not found.' }, { status: 404 });
 
     return NextResponse.json(data, { status: 200 });
-  } catch (err: unknown) {
-    console.error(err);
+  } catch {
     return NextResponse.json(
       { error: 'Unexpected error occurred while fetching foods.' },
       { status: 500 }
@@ -118,10 +117,9 @@ export async function POST(req: Request) {
       },
       { status: 201 }
     );
-  } catch (err: unknown) {
-    console.error(err);
+  } catch {
     return NextResponse.json(
-      { error: 'Unexpected error occurred while fetching foods.' },
+      { error: 'Unexpected error occurred while adding food.' },
       { status: 500 }
     );
   }
@@ -159,10 +157,9 @@ export async function PUT(req: Request) {
       },
       { status: 200 }
     );
-  } catch (err: unknown) {
-    console.error(err);
+  } catch {
     return NextResponse.json(
-      { error: 'Unexpected error occurred while fetching foods.' },
+      { error: 'Unexpected error occurred while updating food.' },
       { status: 500 }
     );
   }
@@ -198,11 +195,10 @@ export async function DELETE(req: Request) {
       { message: 'Food deleted successfully.' },
       { status: 200 }
     );
-} catch (err: unknown) {
-  console.error(err);
-  return NextResponse.json(
-    { error: 'Unexpected error occurred while fetching foods.' },
-    { status: 500 }
-  );
-}
+  } catch {
+    return NextResponse.json(
+      { error: 'Unexpected error occurred while deleting food.' },
+      { status: 500 }
+    );
+  }
 }

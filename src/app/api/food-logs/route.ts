@@ -82,7 +82,7 @@ interface DeleteMealRequest {
   meal_id: number;
 }
 
-/** ---------- GET: Fetch all foods or specific food ---------- **/
+/** ---------- GET: Fetch all food-logs or specific food ---------- **/
 
 export async function GET(req: Request) {
   try {
