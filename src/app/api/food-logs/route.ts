@@ -93,7 +93,7 @@ export async function GET(req: Request) {
     if (userId) query = query.eq("user_id", userId);
     if (mealId) query = query.eq("meal_id", mealId);
 
-    // 👇 Avoid type mismatch issue: use `overrideTypes` (new API) or just let it infer as `any`
+    // Avoid type mismatch issue: use `overrideTypes` (new API) or just let it infer as `any`
     const { data, error } = await query;
 
     if (error) {
@@ -105,19 +105,45 @@ export async function GET(req: Request) {
       return NextResponse.json([], { status: 200 });
     }
 
-    const rows: UserMeal[] = data.map((row: any) => {
-      const details = (row.user_meal_details || []).map((d: any) => ({
-        meal_detail_id: d.meal_detail_id,
-        amount_grams: d.amount_grams,
-        foods: {
-          food_id: d.foods?.food_id,
-          name: d.foods?.name,
-          calories_per_serving: d.foods?.calories_per_serving,
-          protein_per_serving: d.foods?.protein_per_serving,
-          carbs_per_serving: d.foods?.carbs_per_serving,
-          fat_per_serving: d.foods?.fat_per_serving,
-        },
-      }));
+    // Type for raw Supabase response where foods is an array
+    type SupabaseMealDetail = {
+      meal_detail_id: any;
+      amount_grams: any;
+      foods: Array<{
+        food_id: any;
+        name: any;
+        calories_per_serving: any;
+        protein_per_serving: any;
+        carbs_per_serving: any;
+        fat_per_serving: any;
+      }>;
+    };
+
+    type SupabaseUserMeal = {
+      meal_id: any;
+      user_id: any;
+      meal_type: any;
+      log_date: any;
+      user_meal_details: SupabaseMealDetail[];
+    };
+
+    const rows: UserMeal[] = data.map((row: SupabaseUserMeal) => {
+      const details = (row.user_meal_details || []).map((d: SupabaseMealDetail) => {
+        // Supabase returns foods as an array, but we expect a single object
+        const food = Array.isArray(d.foods) ? d.foods[0] : d.foods;
+        return {
+          meal_detail_id: d.meal_detail_id,
+          amount_grams: d.amount_grams,
+          foods: {
+            food_id: food?.food_id,
+            name: food?.name || "",
+            calories_per_serving: food?.calories_per_serving || 0,
+            protein_per_serving: food?.protein_per_serving || 0,
+            carbs_per_serving: food?.carbs_per_serving || 0,
+            fat_per_serving: food?.fat_per_serving || 0,
+          },
+        };
+      });
 
       return {
         meal_id: row.meal_id,
