@@ -40,6 +40,30 @@ interface UserMeal {
   user_meal_details: FoodDetail[];
 }
 
+// Type for Supabase response (foods comes as array from relation)
+interface SupabaseFoodResponse {
+  food_id: number;
+  name: string;
+  calories_per_serving: number;
+  protein_per_serving: number;
+  carbs_per_serving: number;
+  fat_per_serving: number;
+}
+
+interface SupabaseFoodDetailResponse {
+  meal_detail_id: number;
+  amount_grams: number;
+  foods: SupabaseFoodResponse[];
+}
+
+interface SupabaseUserMealResponse {
+  meal_id: number;
+  user_id: number;
+  meal_type: string;
+  log_date: string;
+  user_meal_details: SupabaseFoodDetailResponse[];
+}
+
 interface CreateMealRequest {
   user_id: number;
   meal_type: string;
@@ -105,32 +129,11 @@ export async function GET(req: Request) {
       return NextResponse.json([], { status: 200 });
     }
 
-    // Type for raw Supabase response where foods is an array
-    type SupabaseMealDetail = {
-      meal_detail_id: any;
-      amount_grams: any;
-      foods: Array<{
-        food_id: any;
-        name: any;
-        calories_per_serving: any;
-        protein_per_serving: any;
-        carbs_per_serving: any;
-        fat_per_serving: any;
-      }>;
-    };
-
-    type SupabaseUserMeal = {
-      meal_id: any;
-      user_id: any;
-      meal_type: any;
-      log_date: any;
-      user_meal_details: SupabaseMealDetail[];
-    };
-
-    const rows: UserMeal[] = data.map((row: SupabaseUserMeal) => {
-      const details = (row.user_meal_details || []).map((d: SupabaseMealDetail) => {
+    const rows: UserMeal[] = (data as SupabaseUserMealResponse[]).map((row) => {
+      const details: FoodDetail[] = (row.user_meal_details || []).map((d) => {
         // Supabase returns foods as an array, but we expect a single object
-        const food = Array.isArray(d.foods) ? d.foods[0] : d.foods;
+        const food = d.foods && d.foods.length > 0 ? d.foods[0] : null;
+        
         return {
           meal_detail_id: d.meal_detail_id,
           amount_grams: d.amount_grams,
