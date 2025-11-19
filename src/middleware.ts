@@ -11,6 +11,17 @@ const allowedOrigins = [
 export function middleware(request: NextRequest) {
   const origin = request.headers.get("origin") || "";
 
+  // Normalize paths that have duplicate leading slashes (e.g. //api/...)
+  // Rewriting avoids sending a redirect which breaks CORS preflight OPTIONS.
+  try {
+    const reqUrl = new URL(request.url);
+    if (/^\/\//.test(reqUrl.pathname)) {
+      reqUrl.pathname = reqUrl.pathname.replace(/^\/+/, "/");
+      return NextResponse.rewrite(reqUrl);
+    }
+  } catch {
+    // If URL parsing fails for any reason, continue normally.
+  }
   // Check if the origin is allowed
   const isAllowedOrigin = allowedOrigins.includes(origin);
 
