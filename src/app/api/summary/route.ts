@@ -1,215 +1,375 @@
-import { NextResponse } from 'next/server'
-import { supabase } from 'lib/supabaseClient'
-import { calculateSessionGR } from 'app/utils/grCalculator'
+import { NextResponse } from "next/server";
+import { supabase } from "lib/supabaseClient";
+import { calculateSessionGR } from "app/utils/grCalculator";
+import type {
+  WorkoutSession,
+  UserMeal,
+  ExerciseLog,
+  DailySummary,
+  WorkoutByDate,
+  UserProgressSummary,
+} from "types/datatypes";
 
-// === Types (matching Supabase join results) ===
-interface ExerciseLog {
-  actual_sets: number
-  actual_reps: number
-  weight_kg: number | null
-  duration_seconds: number | null
-  exercise_category?: string
-}
 
-interface Exercise {
-  name: string
-  category: string | null
-}
 
-interface SessionDetail {
-  exercise_logs: ExerciseLog[]
-  exercises: Exercise[] // ✅ Supabase returns array here due to join
-}
+/** ---------- Helper: Generate summary data for a user ---------- **/
 
-interface WorkoutSession {
-  session_id: number
-  type: string | null
-  scheduled_date: string
-  completed: boolean
-  session_details: SessionDetail[]
-}
+async function generateSummary(
+  user_id: number,
+  period_type: "weekly" | "monthly",
+  period_start: string
+): Promise<{
+  total_workouts: number;
+  total_calories_intake: number;
+  avg_protein: number;
+  avg_carbs: number;
+  avg_fat: number;
+  total_duration_minutes: number;
+  total_gr_score: number;
+  avg_gr_score: number;
+  dailyData: DailySummary[];
+}> {
+  console.log('Generating summary for:', { user_id, period_type, period_start });
+  console.log('\n[DEBUG] ====== FETCHING DATA FOR SUMMARY ======');
+  console.log('Period:', { type: period_type, start: period_start });
+  const periodDays = period_type === "weekly" ? 7 : 30;
 
-interface Food {
-  calories_per_serving: number
-  protein_per_serving: number
-  carbs_per_serving: number
-  fat_per_serving: number
-}
+  // Compute date range
+  const startDate = new Date(period_start);
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + periodDays);
+  const startISO = startDate.toISOString().split("T")[0];
+  const endISO = endDate.toISOString().split("T")[0];
 
-interface MealDetail {
-  servings: number
-  foods: Food | Food[]
-}
-
-interface UserMeal {
-  log_date: string
-  user_meal_details: MealDetail[]
-}
-
-export async function POST(req: Request) {
-  const { user_id, period_type, period_start }: {
-    user_id: number
-    period_type: 'weekly' | 'monthly'
-    period_start: string
-  } = await req.json()
-
-  if (!user_id || !period_type || !period_start) {
-    return NextResponse.json(
-      { message: 'user_id, period_type, and period_start are required.' },
-      { status: 400 }
+  /** ---------- 1. Fetch completed workouts within period ---------- **/
+  const { data: workoutsRaw, error: workoutsErr } = await supabase
+    .from("workout_sessions")
+    .select(
+      `
+      session_id,
+      scheduled_date,
+      type,
+      session_details (
+        session_detail_id,
+        exercise_id,
+        exercises!inner (
+          exercise_id,
+          name,
+          category
+        ),
+        exercise_logs (
+          log_id,
+          actual_sets,
+          actual_reps,
+          weight_kg,
+          duration_seconds
+        )
+      )
+    `
     )
+    .eq("user_id", user_id)
+    .eq("completed", true)
+    .gte("scheduled_date", startISO)
+    .lt("scheduled_date", endISO)
+    .order("scheduled_date", { ascending: true });
+
+  if (workoutsErr) throw workoutsErr;
+
+  // Safe cast through unknown to satisfy TS
+  const sessions = (workoutsRaw as unknown as WorkoutSession[]) ?? [];
+  const total_workouts = sessions.length;
+  let total_duration_seconds = 0;
+  const workoutsByDate: Record<string, WorkoutByDate> = {};
+
+  for (const s of sessions) {
+    const dateStr =
+      typeof s.scheduled_date === "string"
+        ? s.scheduled_date.split("T")[0]
+        : (s.scheduled_date as Date).toISOString().split("T")[0];
+
+    if (!workoutsByDate[dateStr])
+      workoutsByDate[dateStr] = { type: s.type ?? null, exercises: [] };
+
+    const details = s.session_details ?? [];
+    for (const sd of details) {
+      const logs = sd.exercise_logs ?? [];
+      for (const el of logs) {
+        if (el.duration_seconds)
+          total_duration_seconds += Number(el.duration_seconds);
+        workoutsByDate[dateStr].exercises.push({
+          exercise_name: sd.exercises?.name ?? null,
+          exercise_category: sd.exercises?.category ?? null,
+          actual_sets: el.actual_sets,
+          actual_reps: el.actual_reps,
+          weight_kg: el.weight_kg,
+          duration_seconds: el.duration_seconds,
+        } as unknown as ExerciseLog);
+      }
+    }
   }
 
-  const isWeekly = period_type === 'weekly'
-  const periodEnd = new Date(period_start)
-  periodEnd.setDate(periodEnd.getDate() + (isWeekly ? 7 : 30))
+  const total_duration_minutes = Math.round(total_duration_seconds / 60);
 
-  try {
-    // === WORKOUT DATA ===
-    const { data: workoutsData, error: workoutError } = await supabase
-      .from('workout_sessions')
-      .select(`
-        session_id,
-        type,
-        scheduled_date,
-        completed,
-        session_details(
-          exercise_logs(
-            actual_sets,
-            actual_reps,
-            weight_kg,
-            duration_seconds
-          ),
-          exercises(
-            name,
-            category
-          )
+  /** ---------- 2. Fetch user meal logs within period ---------- **/
+  const { data: mealsRaw, error: mealsErr } = await supabase
+    .from("user_meals")
+    .select(
+      `
+      meal_id,
+      log_date,
+      meal_type,
+      user_meal_details (
+        meal_detail_id,
+        amount_grams,
+        foods!inner (
+          food_id,
+          calories_per_serving,
+          protein_per_serving,
+          carbs_per_serving,
+          fat_per_serving
         )
-      `)
-      .eq('user_id', user_id)
-      .eq('completed', true)
-      .gte('scheduled_date', period_start)
-      .lt('scheduled_date', periodEnd.toISOString().split('T')[0])
-
-    if (workoutError) throw workoutError
-
-    // ✅ explicitly cast through unknown → correct type
-    const sessions = (workoutsData as unknown as WorkoutSession[]) ?? []
-
-    const workoutsByDate: Record<string, ExerciseLog[]> = {}
-    let totalGR = 0
-
-    for (const ws of sessions) {
-      const date = ws.scheduled_date
-
-      const exercisesWithCategory: ExerciseLog[] = ws.session_details.flatMap(
-        (sd) =>
-          sd.exercise_logs.map((el) => ({
-            ...el,
-            exercise_category: sd.exercises?.[0]?.category ?? '',
-          }))
       )
-
-      if (!workoutsByDate[date]) workoutsByDate[date] = []
-      workoutsByDate[date].push(...exercisesWithCategory)
-    }
-
-    const dailyGR: Record<string, number> = {}
-    for (const [date, logs] of Object.entries(workoutsByDate)) {
-      const safeLogs = logs.map((l) => ({
-        ...l,
-        weight_kg: l.weight_kg ?? 0,
-        exercise_category: l.exercise_category ?? '', // ensure defined string
-      }))
-      const gr = calculateSessionGR(safeLogs)
-      dailyGR[date] = gr
-      totalGR += gr
-    }
-
-
-    const totalWorkouts = Object.keys(workoutsByDate).length
-    const avgGR = totalWorkouts > 0 ? totalGR / totalWorkouts : 0
-
-    // === NUTRITION DATA ===
-    const { data: nutritionData, error: nutritionError } = await supabase
-      .from('user_meals')
-      .select(`
-        log_date,
-        user_meal_details(
-          servings:amount_grams,
-          foods(
-            calories_per_serving,
-            protein_per_serving,
-            carbs_per_serving,
-            fat_per_serving
-          )
-        )
-      `)
-      .eq('user_id', user_id)
-      .gte('log_date', period_start)
-      .lt('log_date', periodEnd.toISOString().split('T')[0])
-
-    if (nutritionError) throw nutritionError
-
-    const dailyNutrition: Record<
-      string,
-      { calories: number; protein: number; carbs: number; fat: number }
-    > = {}
-
-    let totalCalories = 0
-    let totalProtein = 0
-    let totalCarbs = 0
-    let totalFat = 0
-
-    for (const meal of (nutritionData as UserMeal[]) || []) {
-      const date = meal.log_date
-      if (!dailyNutrition[date]) {
-        dailyNutrition[date] = { calories: 0, protein: 0, carbs: 0, fat: 0 }
-      }
-
-      for (const detail of meal.user_meal_details) {
-        const food = Array.isArray(detail.foods)
-          ? detail.foods[0]
-          : detail.foods
-        if (!food) continue
-
-        const s = detail.servings || 0
-        dailyNutrition[date].calories += (food.calories_per_serving || 0) * s
-        dailyNutrition[date].protein += (food.protein_per_serving || 0) * s
-        dailyNutrition[date].carbs += (food.carbs_per_serving || 0) * s
-        dailyNutrition[date].fat += (food.fat_per_serving || 0) * s
-      }
-
-      totalCalories += dailyNutrition[date].calories
-      totalProtein += dailyNutrition[date].protein
-      totalCarbs += dailyNutrition[date].carbs
-      totalFat += dailyNutrition[date].fat
-    }
-
-    const numDays = Object.keys(dailyNutrition).length || (isWeekly ? 7 : 30)
-
-    const response = {
-      total_workouts: totalWorkouts,
-      total_calories_intake: Math.round(totalCalories),
-      avg_protein: Math.round(totalProtein / numDays),
-      avg_carbs: Math.round(totalCarbs / numDays),
-      avg_fat: Math.round(totalFat / numDays),
-      total_gr_score: Math.round(totalGR),
-      avg_gr_score: Math.round(avgGR * 100) / 100,
-      dailyData: Object.keys(dailyNutrition).map((date) => ({
-        date,
-        ...dailyNutrition[date],
-        gr_score: dailyGR[date] || 0,
-      })),
-    }
-
-    return NextResponse.json(response, { status: 201 })
-  } catch (err) {
-    const error = err as Error
-    console.error('Failed to generate summary:', error)
-    return NextResponse.json(
-      { message: 'Failed to generate summary.', error: error.message },
-      { status: 500 }
+    `
     )
+    .eq("user_id", user_id)
+    .gte("log_date", startISO)
+    .lt("log_date", endISO);
+
+  if (mealsErr) throw mealsErr;
+
+  /** ---------- 3. Aggregate total + average nutrition ---------- **/
+  let total_calories_intake = 0;
+  let total_protein = 0;
+  let total_carbs = 0;
+  let total_fat = 0;
+
+  const meals = (mealsRaw as unknown as UserMeal[]) ?? [];
+  for (const m of meals) {
+    const details = m.user_meal_details ?? [];
+    for (const d of details) {
+      const f = d.foods;
+      if (!f) continue;
+      const grams = Number(d.amount_grams ?? 0);
+      total_calories_intake += f.calories_per_serving * grams;
+      total_protein += f.protein_per_serving * grams;
+      total_carbs += f.carbs_per_serving * grams;
+      total_fat += f.fat_per_serving * grams;
+    }
+  }
+
+  const avg_protein = Math.round(total_protein / periodDays);
+  const avg_carbs = Math.round(total_carbs / periodDays);
+  const avg_fat = Math.round(total_fat / periodDays);
+  total_calories_intake = Math.round(total_calories_intake);
+
+  /** ---------- 4. Calculate GR score per workout day ---------- **/
+  let total_gr_score = 0;
+  let workout_count = 0;
+  for (const [, w] of Object.entries(workoutsByDate)) {
+    const dailyGR = calculateSessionGR(
+      w.exercises.map((ex) => ({
+        ...ex,
+        weight_kg: ex.weight_kg ?? 0, // ensure number
+        exercise_category: ex.exercise_category ?? "unknown", // ensure string
+      }))
+    );
+
+    w.total_gr = dailyGR;
+    total_gr_score += dailyGR;
+    if (dailyGR > 0) workout_count++;
+  }
+  const avg_gr_score = workout_count > 0 ? total_gr_score / workout_count : 0;
+
+  /** ---------- 5. Upsert summary record ---------- **/
+  const upsertPayload = {
+    user_id,
+    period_type,
+    period_start: startISO,
+    total_workouts,
+    total_calories_burned: 0,
+    avg_duration_minutes: total_duration_minutes,
+    total_calories_intake,
+    avg_protein,
+    avg_carbs,
+    avg_fat
+  };
+
+  const { error: upsertErr } = await supabase
+    .from("user_progress_summary")
+    .upsert(upsertPayload, { onConflict: "user_id,period_type,period_start" });
+
+  if (upsertErr) throw upsertErr;
+
+  /** ---------- 6. Build daily summaries ---------- **/
+  const dailySummaries: Record<string, DailySummary> = {};
+  for (let d = new Date(startDate); d < endDate; d.setDate(d.getDate() + 1)) {
+    const iso = d.toISOString().split("T")[0];
+    dailySummaries[iso] = {
+      date: iso,
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      workouts: 0,
+      gr_score: 0,
+    };
+  }
+
+  for (const m of meals) {
+    const day =
+      typeof m.log_date === "string"
+        ? m.log_date
+        : (m.log_date as Date).toISOString().split("T")[0];
+    let dayCalories = 0,
+      dayProtein = 0,
+      dayCarbs = 0,
+      dayFat = 0;
+    const details = m.user_meal_details ?? [];
+    for (const d of details) {
+      const f = d.foods;
+      if (!f) continue;
+      const grams = Number(d.amount_grams ?? 0);
+      dayCalories += f.calories_per_serving * grams;
+      dayProtein += f.protein_per_serving * grams;
+      dayCarbs += f.carbs_per_serving * grams;
+      dayFat += f.fat_per_serving * grams;
+    }
+    if (dailySummaries[day]) {
+      dailySummaries[day].calories = Math.round(dayCalories);
+      dailySummaries[day].protein = Math.round(dayProtein);
+      dailySummaries[day].carbs = Math.round(dayCarbs);
+      dailySummaries[day].fat = Math.round(dayFat);
+    }
+  }
+
+  for (const [date, w] of Object.entries(workoutsByDate)) {
+    if (dailySummaries[date]) {
+      dailySummaries[date].workouts = w.exercises.length > 0 ? 1 : 0;
+      dailySummaries[date].gr_score = Math.round(w.total_gr ?? 0);
+    }
+  }
+
+  const dailyData = Object.values(dailySummaries).sort((a, b) =>
+    a.date.localeCompare(b.date)
+  );
+
+  const response = {
+    total_workouts,
+    total_calories_intake,
+    avg_protein,
+    avg_carbs,
+    avg_fat,
+    total_duration_minutes,
+    total_gr_score,
+    avg_gr_score,
+    dailyData,
+  };
+
+  console.log('Summary for period:', {
+    period: period_type,
+    start_date: period_start,
+    stats: {
+      total_workouts,
+      total_calories_intake,
+      avg_protein: `${avg_protein}g/day`,
+      avg_carbs: `${avg_carbs}g/day`,
+      avg_fat: `${avg_fat}g/day`,
+      total_gr_score,
+      avg_gr_score: `${avg_gr_score.toFixed(2)}`
+    },
+    dailyDataPoints: dailyData.length
+  });
+
+  return response;
+}
+
+/** ---------- POST: Generate new summary ---------- **/
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { user_id, period_type, period_start } = body;
+
+    if (!user_id || !period_type || !period_start) {
+      return NextResponse.json(
+        { message: "user_id, period_type, and period_start are required." },
+        { status: 400 }
+      );
+    }
+
+    // Check if user exists
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('user_id')
+      .eq('user_id', user_id)
+      .single();
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { message: "User not found." },
+        { status: 404 }
+      );
+    }
+
+    // Always generate fresh data for accurate summary
+    const payload = await generateSummary(
+      Number(user_id),
+      period_type,
+      period_start
+    );
+    return NextResponse.json(payload, { status: 201 });
+  } catch (err) {
+    console.error("Failed to generate summary:", err);
+    return NextResponse.json(
+      { message: "Failed to generate summary.", error: (err as Error).message },
+      { status: 500 }
+    );
+  }
+}
+
+/** ---------- GET: Retrieve or regenerate summary ---------- **/
+export async function GET(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const user_id = url.searchParams.get("user_id");
+    const period_type = url.searchParams.get("period_type") as
+      | "weekly"
+      | "monthly"
+      | null;
+    const period_start = url.searchParams.get("period_start");
+
+    if (!user_id || !period_type || !period_start) {
+      return NextResponse.json(
+        { message: "user_id, period_type, and period_start are required." },
+        { status: 400 }
+      );
+    }
+
+    // Check if user exists
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('user_id')
+      .eq('user_id', user_id)
+      .single();
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { message: "User not found." },
+        { status: 404 }
+      );
+    }
+
+    // Always generate fresh data for accurate graphs
+    const payload = await generateSummary(
+      Number(user_id),
+      period_type,
+      period_start
+    );
+    return NextResponse.json(payload, { status: 200 });
+  } catch (err) {
+    console.error("Failed to get summary:", err);
+    return NextResponse.json(
+      { message: "Failed to get summary.", error: (err as Error).message },
+      { status: 500 }
+    );
   }
 }

@@ -4,60 +4,23 @@ import jwt from 'jsonwebtoken'
 import { supabase } from 'lib/supabaseClient'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme'
-/**
- * @swagger
- * /api/auth/login:
- *   post:
- *     summary: User login
- *     description: Authenticate a user and return a JWT token.
- *     tags:
- *       - Authentication
- *     parameters:
- *       - in: body
- *         name: credentials
- *         required: true
- *         schema:
- *           type: object
- *           required:
- *             - email
- *             - password
- *           properties:
- *             email:
- *               type: string
- *               format: email
- *               example: "testuser@gmail.com"
- *             password:
- *               type: string
- *               format: password
- *               example: "t123"
- *     responses:
- *       200:
- *         description: Login successful
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 token:
- *                   type: string
- *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
- *                 user:
- *                   type: object
- *                   properties:
- *                     user_id:
- *                       type: string
- *                       example: "123"
- *                     username:
- *                       type: string
- *                       example: "john_doe"
- *                     email:
- *                       type: string
- *                       example: "testuser@gmail.com"
- *       400:
- *         description: Missing email or password
- *       401:
- *         description: Invalid credentials or user not found
- */
+
+const allowedOrigins = ['http://localhost:5173', 'https://traindiary.vercel.app']
+
+export async function OPTIONS() {
+  const origin = allowedOrigins.includes('https://traindiary.vercel.app') ? 'https://traindiary.vercel.app' : ''
+  
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Access-Control-Allow-Credentials',
+      'Access-Control-Max-Age': '86400',
+      'Access-Control-Allow-Credentials': 'true',
+    },
+  })
+}
 
 export async function POST(req: Request) {
   const { email, password } = await req.json()
@@ -89,13 +52,19 @@ export async function POST(req: Request) {
 
   // Create JWT token
   const token = jwt.sign(
-    { user_id: user.id, username: user.username, email },
+    { user_id: user.user_id, username: user.username, email },
     JWT_SECRET,
     { expiresIn: '7d' }
   )
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     token,
-    user: { user_id: user.id, username: user.username, email }
+    user: { user_id: user.user_id, username: user.username, email }
   })
+
+  const origin = allowedOrigins.includes('https://traindiary.vercel.app') ? 'https://traindiary.vercel.app' : ''
+  response.headers.set('Access-Control-Allow-Origin', origin)
+  response.headers.set('Access-Control-Allow-Credentials', 'true')
+  
+  return response
 }
