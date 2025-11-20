@@ -62,9 +62,9 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/api/:path*",
-    "/auth/:path*",
-    "/api/docs/:path*",
-    "/api/auth/:path*",
+    // Run middleware for all paths so we can normalize malformed paths
+    // (e.g. paths with duplicate leading slashes like `//api/...`) before
+    // the platform performs a redirect which breaks CORS preflight requests.
+    "/*",
   ],
 };

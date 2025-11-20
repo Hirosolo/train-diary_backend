@@ -3,12 +3,10 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { supabase } from 'lib/supabaseClient'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme'
-
-const allowedOrigins = ['http://localhost:5173', 'https://traindiary.vercel.app']
+const JWT_SECRET = process.env.JWT_SECRET || '123123'
 
 export async function OPTIONS() {
-  const origin = allowedOrigins.includes('https://traindiary.vercel.app') ? 'https://traindiary.vercel.app' : ''
+ 
   
   return new NextResponse(null, {
     status: 204,
@@ -62,9 +60,7 @@ export async function POST(req: Request) {
     user: { user_id: user.user_id, username: user.username, email }
   })
 
-  const origin = allowedOrigins.includes('https://traindiary.vercel.app') ? 'https://traindiary.vercel.app' : ''
-  response.headers.set('Access-Control-Allow-Origin', origin)
-  response.headers.set('Access-Control-Allow-Credentials', 'true')
+  
   
   return response
 }
