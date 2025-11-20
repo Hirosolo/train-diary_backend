@@ -5,20 +5,8 @@ import { supabase } from 'lib/supabaseClient'
 
 const JWT_SECRET = process.env.JWT_SECRET || '123123'
 
-export async function OPTIONS() {
- 
-  
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': origin,
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Access-Control-Allow-Credentials',
-      'Access-Control-Max-Age': '86400',
-      'Access-Control-Allow-Credentials': 'true',
-    },
-  })
-}
+// CORS is handled globally in `src/middleware.ts` (preflight + response headers).
+// No per-route OPTIONS handler is required here to avoid duplication.
 
 export async function POST(req: Request) {
   const { email, password } = await req.json()
@@ -60,7 +48,5 @@ export async function POST(req: Request) {
     user: { user_id: user.user_id, username: user.username, email }
   })
 
-  
-  
   return response
 }

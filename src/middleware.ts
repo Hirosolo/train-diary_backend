@@ -65,6 +65,7 @@ export const config = {
     // Run middleware for all paths so we can normalize malformed paths
     // (e.g. paths with duplicate leading slashes like `//api/...`) before
     // the platform performs a redirect which breaks CORS preflight requests.
-    "/*",
+    // Use the `:path*` wildcard token which is the valid matcher syntax.
+    '/:path*',
   ],
 };
