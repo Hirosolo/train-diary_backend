@@ -50,25 +50,17 @@ npm install
 Create a `.env` file in the root directory:
 
 ```
-DATABASE_URL="postgresql://user:password@localhost:5432/train_diary"
-JWT_SECRET="your_secret_key"
-PORT=4000
+SUPABASE_UR=<supabase url>
+SUPABASE_ANON_KEY=<supabase api key>
 ```
 
-### 4. Setup the database
-
-```bash
-npx prisma migrate dev
-npx prisma generate
-```
-
-### 5. Start the development server
+### 4. Start the development server
 
 ```bash
 npm run dev
 ```
 
-The backend runs on [http://localhost:4000](http://localhost:4000)
+The backend runs on [http://localhost:3000](http://localhost:3000)
 
 ---
 
