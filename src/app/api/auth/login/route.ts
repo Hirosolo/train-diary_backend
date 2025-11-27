@@ -3,24 +3,10 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { supabase } from 'lib/supabaseClient'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme'
-
-const allowedOrigins = ['http://localhost:5173', 'https://traindiary.vercel.app']
-
-export async function OPTIONS() {
-  const origin = allowedOrigins.includes('https://traindiary.vercel.app') ? 'https://traindiary.vercel.app' : ''
-  
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': origin,
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Access-Control-Allow-Credentials',
-      'Access-Control-Max-Age': '86400',
-      'Access-Control-Allow-Credentials': 'true',
-    },
-  })
-}
+const JWT_SECRET = process.env.JWT_SECRET || '123123'
+// test config
+// CORS is handled globally in `src/middleware.ts` (preflight + response headers).
+// No per-route OPTIONS handler is required here to avoid duplication.
 
 export async function POST(req: Request) {
   const { email, password } = await req.json()
@@ -62,9 +48,5 @@ export async function POST(req: Request) {
     user: { user_id: user.user_id, username: user.username, email }
   })
 
-  const origin = allowedOrigins.includes('https://traindiary.vercel.app') ? 'https://traindiary.vercel.app' : ''
-  response.headers.set('Access-Control-Allow-Origin', origin)
-  response.headers.set('Access-Control-Allow-Credentials', 'true')
-  
   return response
 }

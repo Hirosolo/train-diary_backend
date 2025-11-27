@@ -11,6 +11,17 @@ const allowedOrigins = [
 export function middleware(request: NextRequest) {
   const origin = request.headers.get("origin") || "";
 
+  // Normalize paths that have duplicate leading slashes (e.g. //api/...)
+  // Rewriting avoids sending a redirect which breaks CORS preflight OPTIONS.
+  try {
+    const reqUrl = new URL(request.url);
+    if (/^\/\//.test(reqUrl.pathname)) {
+      reqUrl.pathname = reqUrl.pathname.replace(/^\/+/, "/");
+      return NextResponse.rewrite(reqUrl);
+    }
+  } catch {
+    // If URL parsing fails for any reason, continue normally.
+  }
   // Check if the origin is allowed
   const isAllowedOrigin = allowedOrigins.includes(origin);
 
@@ -51,9 +62,10 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/api/:path*",
-    "/auth/:path*",
-    "/api/docs/:path*",
-    "/api/auth/:path*",
+    // Run middleware for all paths so we can normalize malformed paths
+    // (e.g. paths with duplicate leading slashes like `//api/...`) before
+    // the platform performs a redirect which breaks CORS preflight requests.
+    // Use the `:path*` wildcard token which is the valid matcher syntax.
+    '/:path*',
   ],
 };
