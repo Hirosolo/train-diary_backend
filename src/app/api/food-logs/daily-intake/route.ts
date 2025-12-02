@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "lib/supabaseClient";
+import { Food } from "types/datatypes";
 
 type MacroTotals = {
   meals_count: number;
@@ -81,7 +82,7 @@ export async function GET(request: Request) {
           if (!food) continue;
 
           // serving_type is a string like "100 g" → extract numeric part
-          const servingText = (food as any).serving_type as string | undefined;
+          const servingText = (food as Food).serving_type as string | undefined;
           const servingSizeGrams = servingText
             ? Number(servingText.match(/\d+(\.\d+)?/)?.[0] ?? 0)
             : 0;
