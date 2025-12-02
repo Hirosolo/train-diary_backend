@@ -89,6 +89,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("user_id");
     const mealId = searchParams.get("meal_id");
+    const date = searchParams.get("date");
 
     const selectQuery = `
       meal_id,
@@ -116,6 +117,7 @@ export async function GET(req: Request) {
 
     if (userId) query = query.eq("user_id", userId);
     if (mealId) query = query.eq("meal_id", mealId);
+    if (date) query = query.eq("log_date", date)
 
     // Avoid type mismatch issue: use `overrideTypes` (new API) or just let it infer as `any`
     const { data, error } = await query;
