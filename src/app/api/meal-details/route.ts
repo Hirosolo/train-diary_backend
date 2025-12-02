@@ -49,7 +49,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const mealId = searchParams.get('meal_id');
 
-    let query = supabase
+    const query = supabase
       .from('user_meal_details')
       .select(
         `
