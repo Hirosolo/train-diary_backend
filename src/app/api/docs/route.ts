@@ -841,31 +841,91 @@ const spec = {
         responses: {
           200: {
             description: "The requested meal detail entry.",
-            schema: 
-            {
+            schema: {
               type: "object",
-              description: "A detailed entry for a single food item logged within a meal.",
+              description:
+                "A detailed entry for a single food item logged within a meal.",
               properties: {
-                meal_detail_id: { type: "integer", example: 101, description: "Unique identifier for this specific food entry (meal detail)." },
-                meal_id: { type: "integer", example: 50, description: "The ID of the parent meal log." },
-                amount_grams: { type: "number", format: "float", example: 150.5, description: "The amount of the food item consumed, in grams." },
+                meal_detail_id: {
+                  type: "integer",
+                  example: 101,
+                  description:
+                    "Unique identifier for this specific food entry (meal detail).",
+                },
+                meal_id: {
+                  type: "integer",
+                  example: 50,
+                  description: "The ID of the parent meal log.",
+                },
+                amount_grams: {
+                  type: "number",
+                  format: "float",
+                  example: 150.5,
+                  description:
+                    "The amount of the food item consumed, in grams.",
+                },
                 food: {
                   type: "object",
                   description: "Details of the associated food item.",
                   properties: {
-                    food_id: { type: "integer", example: 1, description: "Unique ID of the food item in the master 'foods' table." },
-                    name: { type: "string", example: "Chicken Breast", description: "Name of the food." },
-                    calories_per_serving: { type: "number", format: "float", example: 165, description: "Calories per serving (based on the serving_type)." },
-                    protein_per_serving: { type: "number", format: "float", example: 31, description: "Protein (g) per serving." },
-                    carbs_per_serving: { type: "number", format: "float", example: 0, description: "Carbohydrates (g) per serving." },
-                    fat_per_serving: { type: "number", format: "float", example: 3.6, description: "Fat (g) per serving." },
-                    serving_type: { type: "string", example: "100 g", description: "Description of the serving size (e.g., '100 g', '1 cup')." },
-                    image: { type: "string", description: "Optional image URL for the food item.", example: "https://example.com/chicken.jpg" }
+                    food_id: {
+                      type: "integer",
+                      example: 1,
+                      description:
+                        "Unique ID of the food item in the master 'foods' table.",
+                    },
+                    name: {
+                      type: "string",
+                      example: "Chicken Breast",
+                      description: "Name of the food.",
+                    },
+                    calories_per_serving: {
+                      type: "number",
+                      format: "float",
+                      example: 165,
+                      description:
+                        "Calories per serving (based on the serving_type).",
+                    },
+                    protein_per_serving: {
+                      type: "number",
+                      format: "float",
+                      example: 31,
+                      description: "Protein (g) per serving.",
+                    },
+                    carbs_per_serving: {
+                      type: "number",
+                      format: "float",
+                      example: 0,
+                      description: "Carbohydrates (g) per serving.",
+                    },
+                    fat_per_serving: {
+                      type: "number",
+                      format: "float",
+                      example: 3.6,
+                      description: "Fat (g) per serving.",
+                    },
+                    serving_type: {
+                      type: "string",
+                      example: "100 g",
+                      description:
+                        "Description of the serving size (e.g., '100 g', '1 cup').",
+                    },
+                    image: {
+                      type: "string",
+                      description: "Optional image URL for the food item.",
+                      example: "https://example.com/chicken.jpg",
+                    },
                   },
-                  required: ["name", "calories_per_serving", "protein_per_serving", "carbs_per_serving", "fat_per_serving"]
-                }
+                  required: [
+                    "name",
+                    "calories_per_serving",
+                    "protein_per_serving",
+                    "carbs_per_serving",
+                    "fat_per_serving",
+                  ],
+                },
               },
-              required: ["meal_detail_id", "meal_id", "amount_grams", "food"]
+              required: ["meal_detail_id", "meal_id", "amount_grams", "food"],
             }, // Using the full inline schema defined above
           },
           400: errorResponse(
@@ -895,13 +955,15 @@ const spec = {
             in: "query",
             required: true,
             type: "integer",
-            description: "The ID of the meal log for which to calculate nutrition.",
+            description:
+              "The ID of the meal log for which to calculate nutrition.",
             example: 50,
           },
         ],
         responses: {
           200: {
-            description: "Nutritional breakdown for each food item in the meal.",
+            description:
+              "Nutritional breakdown for each food item in the meal.",
             schema: {
               type: "object",
               properties: {
@@ -998,7 +1060,8 @@ const spec = {
     "/progress": {
       get: {
         tags: ["Progress"],
-        summary: "Retrieve user progress summaries or daily GR scores for a month",
+        summary:
+          "Retrieve user progress summaries or daily GR scores for a month",
         description:
           "If `user_id`, `year`, and `month` are provided, calculates and returns the daily Growth Rate (GR) score for each completed workout session within that month. Otherwise, it returns the aggregated user progress summaries.",
         parameters: [
@@ -1007,7 +1070,8 @@ const spec = {
             in: "query",
             required: false,
             type: "integer",
-            description: "The ID of the user. Required when fetching daily GR scores.",
+            description:
+              "The ID of the user. Required when fetching daily GR scores.",
             example: 1,
           },
           {
@@ -1103,7 +1167,8 @@ const spec = {
             required: true,
             type: "string",
             enum: ["weekly", "monthly"],
-            description: "The duration of the summary period ('weekly' or 'monthly').",
+            description:
+              "The duration of the summary period ('weekly' or 'monthly').",
             example: "weekly",
           },
           {
@@ -1156,8 +1221,7 @@ const spec = {
                   type: "string",
                   enum: ["weekly", "monthly"],
                   example: "monthly",
-                  description:
-                    "The duration of the summary period (required).",
+                  description: "The duration of the summary period (required).",
                 },
                 period_start: {
                   type: "string",
@@ -1186,6 +1250,54 @@ const spec = {
           500: errorResponse(
             "Internal Server Error: Failed to generate summary.",
             "Failed to generate summary."
+          ),
+        },
+      },
+    },
+    "/users": {
+      get: {
+        tags: ["Auth"],
+        summary: "Retrieve a list of all users",
+        description:
+          "Fetches a comprehensive list of all registered users from the database. Note: In a production environment, this endpoint would typically require strong admin authentication or be limited to a single user query.",
+        responses: {
+          200: {
+            description: "A list of user objects.",
+            schema: {
+              type: "array",
+              items: {
+                type: "object",
+                description: "A user account object.",
+                properties: {
+                  user_id: {
+                    type: "integer",
+                    example: 1,
+                    description: "Unique ID of the user.",
+                  },
+                  username: {
+                    type: "string",
+                    example: "john_doe",
+                    description: "The user's username.",
+                  },
+                  email: {
+                    type: "string",
+                    format: "email",
+                    example: "john.doe@example.com",
+                    description: "The user's email address.",
+                  },
+                  created_at: {
+                    type: "string",
+                    format: "date-time",
+                    description: "Timestamp of user creation.",
+                  },
+                },
+                required: ["user_id", "username", "email"],
+              },
+            },
+          },
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch data.",
+            "Failed to fetch users."
           ),
         },
       },
