@@ -607,6 +607,221 @@ const spec = {
         },
       },
     },
+    "/foods": {
+      get: {
+        tags: ["Foods"],
+        summary: "Retrieve all food items or a specific food item",
+        description:
+          "Fetches a list of all available food items. Can be filtered by a specific food_id using a query parameter.",
+        parameters: [
+          {
+            name: "food_id",
+            in: "query",
+            required: false,
+            type: "integer",
+            description: "Optional: ID of a specific food item to retrieve.",
+            example: 1,
+          },
+        ],
+        responses: {
+          200: {
+            description: "A list of food items or a single food item.",
+            schema: {
+              type: "array",
+              items: {
+                $ref: "#/definitions/Food",
+              },
+            },
+          },
+          404: errorResponse(
+            "Not Found: Food item not found.",
+            "Food not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch data.",
+            "Failed to fetch foods."
+          ),
+        },
+      },
+      post: {
+        tags: ["Foods"],
+        summary: "Add a new food item",
+        description:
+          "Creates and stores a new food item definition with nutritional information.",
+        parameters: [
+          {
+            name: "New Food Item",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                name: {
+                  type: "string",
+                  example: "Salmon Fillet",
+                  description: "Name of the food (required).",
+                },
+                calories_per_serving: {
+                  type: "number",
+                  example: 208,
+                  description: "Calories per 100g serving (required).",
+                },
+                protein_per_serving: {
+                  type: "number",
+                  example: 20,
+                  description: "Protein grams per 100g serving (required).",
+                },
+                carbs_per_serving: {
+                  type: "number",
+                  example: 0,
+                  description:
+                    "Carbohydrate grams per 100g serving (required).",
+                },
+                fat_per_serving: {
+                  type: "number",
+                  example: 13,
+                  description: "Fat grams per 100g serving (required).",
+                },
+                serving_type: {
+                  type: "string",
+                  example: "100 g",
+                  description: "Unit used for serving sizes (required).",
+                },
+                image: {
+                  type: "string",
+                  format: "url",
+                  description: "Optional URL for a food image.",
+                },
+              },
+              required: [
+                "name",
+                "calories_per_serving",
+                "protein_per_serving",
+                "carbs_per_serving",
+                "fat_per_serving",
+                "serving_type",
+              ],
+            },
+          },
+        ],
+        responses: {
+          201: {
+            description: "Food item successfully added.",
+            schema: {
+              type: "object",
+              properties: {
+                food_id: { type: "integer", example: 5 },
+                message: {
+                  type: "string",
+                  example: "Food added successfully.",
+                },
+              },
+            },
+          },
+          400: errorResponse(
+            "Bad Request: Missing required field.",
+            "Food name and nutritional details are required."
+          ),
+          409: errorResponse(
+            "Conflict: Food name already exists.",
+            "Food with this name already exists."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to add food.",
+            "Failed to add food."
+          ),
+        },
+      },
+      put: {
+        tags: ["Foods"],
+        summary: "Update an existing food item",
+        description:
+          "Updates details of an existing food item by ID. Any field not provided will remain unchanged.",
+        parameters: [
+          {
+            name: "Update Food Item",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                food_id: {
+                  type: "integer",
+                  example: 1,
+                  description: "ID of the food item to update (required).",
+                },
+                name: { type: "string", example: "Chicken Breast (Cooked)" },
+                calories_per_serving: { type: "number", example: 180 },
+                protein_per_serving: { type: "number", example: 34 },
+                // ... other optional fields
+              },
+              required: ["food_id"],
+            },
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Food item updated successfully.",
+            "Food updated successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing food ID.",
+            "Missing food_id for update."
+          ),
+          404: errorResponse(
+            "Not Found: Food does not exist.",
+            "Food not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to update food.",
+            "Failed to update food."
+          ),
+        },
+      },
+      delete: {
+        tags: ["Foods"],
+        summary: "Delete a food item by ID",
+        description:
+          "Deletes a single food item from the database using its unique ID.",
+        parameters: [
+          {
+            name: "Food ID",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                food_id: {
+                  type: "integer",
+                  example: 1,
+                  description:
+                    "The unique ID of the food item to delete (JSON body).",
+                },
+              },
+              required: ["food_id"],
+            },
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Food item successfully deleted.",
+            "Food deleted successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing ID.",
+            "Food ID is required."
+          ),
+          404: errorResponse(
+            "Not Found: Food does not exist.",
+            "Food not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to delete food.",
+            "Failed to delete food."
+          ),
+        },
+      },
+    },
   },
 };
 
