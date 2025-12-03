@@ -830,7 +830,7 @@ const spec = {
           "Fetches a single Meal Detail (individual food item log) using its unique ID, including full food information.",
         parameters: [
           {
-            name: "meal_detail_id",
+            name: "meal_id",
             in: "query",
             required: true,
             type: "integer",
@@ -1147,6 +1147,93 @@ const spec = {
           500: errorResponse(
             "Internal Server Error: Failed to fetch data.",
             "Failed to fetch meal nutrition."
+          ),
+        },
+      },
+    },
+    "/progress": {
+      get: {
+        tags: ["Progress"],
+        summary: "Retrieve user progress summaries or daily GR scores for a month",
+        description:
+          "If `user_id`, `year`, and `month` are provided, calculates and returns the daily Growth Rate (GR) score for each completed workout session within that month. Otherwise, it returns the aggregated user progress summaries.",
+        parameters: [
+          {
+            name: "user_id",
+            in: "query",
+            required: false,
+            type: "integer",
+            description: "The ID of the user. Required when fetching daily GR scores.",
+            example: 1,
+          },
+          {
+            name: "year",
+            in: "query",
+            required: false,
+            type: "integer",
+            description:
+              "The year for which to retrieve daily GR scores (e.g., 2024). Requires `user_id` and `month`.",
+            example: 2024,
+          },
+          {
+            name: "month",
+            in: "query",
+            required: false,
+            type: "integer",
+            description:
+              "The month (1-12) for which to retrieve daily GR scores. Requires `user_id` and `year`.",
+            example: 5,
+          },
+        ],
+        responses: {
+          200: {
+            description:
+              "Daily GR scores for the specified month OR a list of all user progress summaries.",
+            schema: {
+              type: "array",
+              items: {
+                oneOf: [
+                  {
+                    description: "Daily GR Score (if year/month provided)",
+                    type: "object",
+                    properties: {
+                      date: {
+                        type: "string",
+                        format: "date",
+                        example: "2024-05-15",
+                        description: "The date of the completed workout.",
+                      },
+                      gr_score: {
+                        type: "integer",
+                        example: 4500,
+                        description: "The calculated daily Growth Rate score.",
+                      },
+                    },
+                  },
+                  {
+                    description: "Progress Summary (if no date/month provided)",
+                    // Assuming a Progress Summary definition exists or is simple:
+                    type: "object",
+                    properties: {
+                      summary_id: { type: "integer" },
+                      user_id: { type: "integer" },
+                      period_start: { type: "string", format: "date" },
+                      total_volume_lifted: { type: "number" },
+                      // ... other summary fields
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          400: errorResponse(
+            "Bad Request: Invalid parameters.",
+            "Invalid user_id, year, or month. Month should be 1-12."
+          ),
+          404: errorResponse("Not Found: User not found.", "User not found."),
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch data.",
+            "Failed to fetch workouts."
           ),
         },
       },
