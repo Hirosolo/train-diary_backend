@@ -822,6 +822,223 @@ const spec = {
         },
       },
     },
+    "/meal-details": {
+      get: {
+        tags: ["Meal Details"],
+        summary: "Retrieve a specific food entry within a meal log",
+        description:
+          "Fetches a single Meal Detail (individual food item log) using its unique ID, including full food information.",
+        parameters: [
+          {
+            name: "meal_detail_id",
+            in: "query",
+            required: true,
+            type: "integer",
+            description: "The unique ID of the meal detail entry to retrieve.",
+            example: 101,
+          },
+        ],
+        responses: {
+          200: {
+            description: "The requested meal detail entry.",
+            schema: 
+            {
+              type: "object",
+              description: "A detailed entry for a single food item logged within a meal.",
+              properties: {
+                meal_detail_id: { type: "integer", example: 101, description: "Unique identifier for this specific food entry (meal detail)." },
+                meal_id: { type: "integer", example: 50, description: "The ID of the parent meal log." },
+                amount_grams: { type: "number", format: "float", example: 150.5, description: "The amount of the food item consumed, in grams." },
+                food: {
+                  type: "object",
+                  description: "Details of the associated food item.",
+                  properties: {
+                    food_id: { type: "integer", example: 1, description: "Unique ID of the food item in the master 'foods' table." },
+                    name: { type: "string", example: "Chicken Breast", description: "Name of the food." },
+                    calories_per_serving: { type: "number", format: "float", example: 165, description: "Calories per serving (based on the serving_type)." },
+                    protein_per_serving: { type: "number", format: "float", example: 31, description: "Protein (g) per serving." },
+                    carbs_per_serving: { type: "number", format: "float", example: 0, description: "Carbohydrates (g) per serving." },
+                    fat_per_serving: { type: "number", format: "float", example: 3.6, description: "Fat (g) per serving." },
+                    serving_type: { type: "string", example: "100 g", description: "Description of the serving size (e.g., '100 g', '1 cup')." },
+                    image: { type: "string", description: "Optional image URL for the food item.", example: "https://example.com/chicken.jpg" }
+                  },
+                  required: ["name", "calories_per_serving", "protein_per_serving", "carbs_per_serving", "fat_per_serving"]
+                }
+              },
+              required: ["meal_detail_id", "meal_id", "amount_grams", "food"]
+            }, // Using the full inline schema defined above
+          },
+          400: errorResponse(
+            "Bad Request: Missing ID.",
+            "meal_detail_id is required."
+          ),
+          404: errorResponse(
+            "Not Found: Meal detail not found.",
+            "Meal detail not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch data.",
+            "Failed to fetch meal detail."
+          ),
+        },
+      },
+      post: {
+        tags: ["Meal Details"],
+        summary: "Add a new food entry to an existing meal log",
+        description:
+          "Adds an individual food item and its consumed amount to an existing meal (identified by meal_id).",
+        parameters: [
+          {
+            name: "New Meal Detail",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                meal_id: {
+                  type: "integer",
+                  example: 50,
+                  description:
+                    "ID of the existing meal log to attach this detail to (required).",
+                },
+                food_id: {
+                  type: "integer",
+                  example: 3,
+                  description:
+                    "ID of the food item (from the /foods list) (required).",
+                },
+                amount_grams: {
+                  type: "number",
+                  format: "float",
+                  example: 100,
+                  description: "Amount consumed in grams (required).",
+                },
+              },
+              required: ["meal_id", "food_id", "amount_grams"],
+            },
+          },
+        ],
+        responses: {
+          201: {
+            description: "Food entry added to meal successfully.",
+            schema: {
+              type: "object",
+              properties: {
+                meal_detail_id: { type: "integer", example: 102 },
+                message: {
+                  type: "string",
+                  example: "Food entry added to meal successfully.",
+                },
+              },
+            },
+          },
+          400: errorResponse(
+            "Bad Request: Missing required fields or invalid data.",
+            "Missing meal_id, food_id, or amount_grams."
+          ),
+          404: errorResponse(
+            "Not Found: Meal or Food not found.",
+            "Existing meal or food item not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to add food entry.",
+            "Failed to create meal detail."
+          ),
+        },
+      },
+      put: {
+        tags: ["Meal Details"],
+        summary: "Update the amount of a food entry",
+        description:
+          "Updates the consumed amount (amount_grams) for an existing food entry (meal_detail_id) in a meal.",
+        parameters: [
+          {
+            name: "Update Meal Detail",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                meal_detail_id: {
+                  type: "integer",
+                  example: 101,
+                  description:
+                    "ID of the meal detail entry to update (required).",
+                },
+                amount_grams: {
+                  type: "number",
+                  format: "float",
+                  example: 180.5,
+                  description: "New amount consumed in grams (required).",
+                },
+              },
+              required: ["meal_detail_id", "amount_grams"],
+            },
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Meal detail updated successfully.",
+            "Meal detail amount updated successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing required fields.",
+            "Missing meal_detail_id or amount_grams."
+          ),
+          404: errorResponse(
+            "Not Found: Meal detail not found.",
+            "Meal detail entry not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to update entry.",
+            "Failed to update meal detail."
+          ),
+        },
+      },
+      delete: {
+        tags: ["Meal Details"],
+        summary: "Remove a food entry from a meal log",
+        description:
+          "Deletes a specific food entry (meal_detail_id) from its associated meal log.",
+        parameters: [
+          {
+            name: "Delete Meal Detail",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                meal_detail_id: {
+                  type: "integer",
+                  example: 101,
+                  description:
+                    "The unique ID of the meal detail entry to delete (required).",
+                },
+              },
+              required: ["meal_detail_id"],
+            },
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Meal detail deleted successfully.",
+            "Meal detail deleted successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing ID.",
+            "meal_detail_id is required."
+          ),
+          404: errorResponse(
+            "Not Found: Meal detail not found.",
+            "Meal detail not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to delete entry.",
+            "Failed to delete meal detail."
+          ),
+        },
+      },
+    },
   },
 };
 
