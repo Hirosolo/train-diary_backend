@@ -13,6 +13,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const user_id = searchParams.get("user_id");
     const session_id = searchParams.get("session_id");
+    const month = searchParams.get("month");
 
     if (!user_id && !session_id) {
       return NextResponse.json(
@@ -23,11 +24,37 @@ export async function GET(req: Request) {
 
     // Fetch all workout sessions for a specific user
     if (user_id) {
-      const { data, error } = await supabase
+      let query = supabase
         .from("workout_sessions")
         .select("*")
         .eq("user_id", user_id)
         .order("scheduled_date", { ascending: false });
+
+      // Optional month filter (format: YYYY-MM)
+      if (month) {
+        try {
+          const [yearStr, monthStr] = month.split("-");
+          const yearNum = Number(yearStr);
+          const monthNum = Number(monthStr);
+
+          if (!Number.isNaN(yearNum) && !Number.isNaN(monthNum)) {
+            const startDate = new Date(yearNum, monthNum - 1, 1);
+            const endDate = new Date(yearNum, monthNum, 1);
+
+            const startISO = startDate.toISOString().split("T")[0];
+            const endISO = endDate.toISOString().split("T")[0];
+
+            query = query
+              .gte("scheduled_date", startISO)
+              .lt("scheduled_date", endISO);
+          }
+        } catch (e) {
+          console.warn("Invalid month format, expected YYYY-MM:", month, e);
+        }
+      }
+
+      const { data, error } = await query;
+      
 
       if (error) {
         console.error("Error fetching sessions:", error.message);
