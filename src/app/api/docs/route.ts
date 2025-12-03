@@ -564,6 +564,524 @@ const spec = {
         },
       },
     },
+    "/food-logs/daily-intake": {
+      get: {
+        tags: ["Food Logs"],
+        summary: "Calculate daily total macronutrients and calories",
+        description:
+          "Calculates the total caloric and macronutrient intake (Protein, Carbs, Fat) for a specific user on a given date.",
+        parameters: [
+          {
+            name: "user_id",
+            in: "query",
+            required: true,
+            type: "integer",
+            description: "The ID of the user for whom to calculate intake.",
+            example: 1,
+          },
+          {
+            name: "date",
+            in: "query",
+            required: true,
+            type: "string",
+            format: "date",
+            description: "The date for the calculation (YYYY-MM-DD).",
+            example: "2024-05-15",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Daily intake totals summary.",
+            schema: {
+              $ref: "#/definitions/DailyIntakeSummary",
+            },
+          },
+          400: errorResponse(
+            "Bad Request: Missing user_id or date.",
+            "user_id and date are required."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to calculate intake.",
+            "Failed to calculate daily intake."
+          ),
+        },
+      },
+    },
+    "/foods": {
+      get: {
+        tags: ["Foods"],
+        summary: "Retrieve all food items or a specific food item",
+        description:
+          "Fetches a list of all available food items. Can be filtered by a specific food_id using a query parameter.",
+        parameters: [
+          {
+            name: "food_id",
+            in: "query",
+            required: false,
+            type: "integer",
+            description: "Optional: ID of a specific food item to retrieve.",
+            example: 1,
+          },
+        ],
+        responses: {
+          200: {
+            description: "A list of food items or a single food item.",
+            schema: {
+              type: "array",
+              items: {
+                $ref: "#/definitions/Food",
+              },
+            },
+          },
+          404: errorResponse(
+            "Not Found: Food item not found.",
+            "Food not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch data.",
+            "Failed to fetch foods."
+          ),
+        },
+      },
+      post: {
+        tags: ["Foods"],
+        summary: "Add a new food item",
+        description:
+          "Creates and stores a new food item definition with nutritional information.",
+        parameters: [
+          {
+            name: "New Food Item",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                name: {
+                  type: "string",
+                  example: "Salmon Fillet",
+                  description: "Name of the food (required).",
+                },
+                calories_per_serving: {
+                  type: "number",
+                  example: 208,
+                  description: "Calories per 100g serving (required).",
+                },
+                protein_per_serving: {
+                  type: "number",
+                  example: 20,
+                  description: "Protein grams per 100g serving (required).",
+                },
+                carbs_per_serving: {
+                  type: "number",
+                  example: 0,
+                  description:
+                    "Carbohydrate grams per 100g serving (required).",
+                },
+                fat_per_serving: {
+                  type: "number",
+                  example: 13,
+                  description: "Fat grams per 100g serving (required).",
+                },
+                serving_type: {
+                  type: "string",
+                  example: "100 g",
+                  description: "Unit used for serving sizes (required).",
+                },
+                image: {
+                  type: "string",
+                  format: "url",
+                  description: "Optional URL for a food image.",
+                },
+              },
+              required: [
+                "name",
+                "calories_per_serving",
+                "protein_per_serving",
+                "carbs_per_serving",
+                "fat_per_serving",
+                "serving_type",
+              ],
+            },
+          },
+        ],
+        responses: {
+          201: {
+            description: "Food item successfully added.",
+            schema: {
+              type: "object",
+              properties: {
+                food_id: { type: "integer", example: 5 },
+                message: {
+                  type: "string",
+                  example: "Food added successfully.",
+                },
+              },
+            },
+          },
+          400: errorResponse(
+            "Bad Request: Missing required field.",
+            "Food name and nutritional details are required."
+          ),
+          409: errorResponse(
+            "Conflict: Food name already exists.",
+            "Food with this name already exists."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to add food.",
+            "Failed to add food."
+          ),
+        },
+      },
+      put: {
+        tags: ["Foods"],
+        summary: "Update an existing food item",
+        description:
+          "Updates details of an existing food item by ID. Any field not provided will remain unchanged.",
+        parameters: [
+          {
+            name: "Update Food Item",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                food_id: {
+                  type: "integer",
+                  example: 1,
+                  description: "ID of the food item to update (required).",
+                },
+                name: { type: "string", example: "Chicken Breast (Cooked)" },
+                calories_per_serving: { type: "number", example: 180 },
+                protein_per_serving: { type: "number", example: 34 },
+                // ... other optional fields
+              },
+              required: ["food_id"],
+            },
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Food item updated successfully.",
+            "Food updated successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing food ID.",
+            "Missing food_id for update."
+          ),
+          404: errorResponse(
+            "Not Found: Food does not exist.",
+            "Food not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to update food.",
+            "Failed to update food."
+          ),
+        },
+      },
+      delete: {
+        tags: ["Foods"],
+        summary: "Delete a food item by ID",
+        description:
+          "Deletes a single food item from the database using its unique ID.",
+        parameters: [
+          {
+            name: "Food ID",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                food_id: {
+                  type: "integer",
+                  example: 1,
+                  description:
+                    "The unique ID of the food item to delete (JSON body).",
+                },
+              },
+              required: ["food_id"],
+            },
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Food item successfully deleted.",
+            "Food deleted successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing ID.",
+            "Food ID is required."
+          ),
+          404: errorResponse(
+            "Not Found: Food does not exist.",
+            "Food not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to delete food.",
+            "Failed to delete food."
+          ),
+        },
+      },
+    },
+    "/meal-details": {
+      get: {
+        tags: ["Meal Details"],
+        summary: "Retrieve a specific food entry within a meal log",
+        description:
+          "Fetches a single Meal Detail (individual food item log) using its unique ID, including full food information.",
+        parameters: [
+          {
+            name: "meal_id",
+            in: "query",
+            required: true,
+            type: "integer",
+            description: "The unique ID of the meal detail entry to retrieve.",
+            example: 101,
+          },
+        ],
+        responses: {
+          200: {
+            description: "The requested meal detail entry.",
+            schema: 
+            {
+              type: "object",
+              description: "A detailed entry for a single food item logged within a meal.",
+              properties: {
+                meal_detail_id: { type: "integer", example: 101, description: "Unique identifier for this specific food entry (meal detail)." },
+                meal_id: { type: "integer", example: 50, description: "The ID of the parent meal log." },
+                amount_grams: { type: "number", format: "float", example: 150.5, description: "The amount of the food item consumed, in grams." },
+                food: {
+                  type: "object",
+                  description: "Details of the associated food item.",
+                  properties: {
+                    food_id: { type: "integer", example: 1, description: "Unique ID of the food item in the master 'foods' table." },
+                    name: { type: "string", example: "Chicken Breast", description: "Name of the food." },
+                    calories_per_serving: { type: "number", format: "float", example: 165, description: "Calories per serving (based on the serving_type)." },
+                    protein_per_serving: { type: "number", format: "float", example: 31, description: "Protein (g) per serving." },
+                    carbs_per_serving: { type: "number", format: "float", example: 0, description: "Carbohydrates (g) per serving." },
+                    fat_per_serving: { type: "number", format: "float", example: 3.6, description: "Fat (g) per serving." },
+                    serving_type: { type: "string", example: "100 g", description: "Description of the serving size (e.g., '100 g', '1 cup')." },
+                    image: { type: "string", description: "Optional image URL for the food item.", example: "https://example.com/chicken.jpg" }
+                  },
+                  required: ["name", "calories_per_serving", "protein_per_serving", "carbs_per_serving", "fat_per_serving"]
+                }
+              },
+              required: ["meal_detail_id", "meal_id", "amount_grams", "food"]
+            }, // Using the full inline schema defined above
+          },
+          400: errorResponse(
+            "Bad Request: Missing ID.",
+            "meal_detail_id is required."
+          ),
+          404: errorResponse(
+            "Not Found: Meal detail not found.",
+            "Meal detail not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch data.",
+            "Failed to fetch meal detail."
+          ),
+        },
+      },
+    },
+    "/meal-details/nutrition": {
+      get: {
+        tags: ["Meal Details"],
+        summary: "Calculate and retrieve food-level nutrition for a meal",
+        description:
+          "Calculates the Calories, Protein, Carbs, and Fat for each food item logged in a specific meal, based on the amount consumed (amount_grams) and the food's serving details.",
+        parameters: [
+          {
+            name: "meal_id",
+            in: "query",
+            required: true,
+            type: "integer",
+            description: "The ID of the meal log for which to calculate nutrition.",
+            example: 50,
+          },
+        ],
+        responses: {
+          200: {
+            description: "Nutritional breakdown for each food item in the meal.",
+            schema: {
+              type: "object",
+              properties: {
+                meal_id: {
+                  type: "integer",
+                  example: 50,
+                  description: "The ID of the meal.",
+                },
+                foods: {
+                  type: "array",
+                  description:
+                    "A list of food items in the meal with calculated nutrition.",
+                  items: {
+                    type: "object",
+                    properties: {
+                      meal_detail_id: {
+                        type: "integer",
+                        example: 101,
+                        description: "The unique ID of the food entry.",
+                      },
+                      food_id: {
+                        type: "integer",
+                        example: 1,
+                        description: "ID of the food item.",
+                      },
+                      name: {
+                        type: "string",
+                        example: "Chicken Breast",
+                        description: "Name of the food item.",
+                      },
+                      amount_grams: {
+                        type: "number",
+                        format: "float",
+                        example: 150.5,
+                        description: "Amount consumed in grams.",
+                      },
+                      calories: {
+                        type: "number",
+                        format: "float",
+                        example: 248.33,
+                        description: "Calculated total calories.",
+                      },
+                      protein: {
+                        type: "number",
+                        format: "float",
+                        example: 46.66,
+                        description: "Calculated total protein (g).",
+                      },
+                      carbs: {
+                        type: "number",
+                        format: "float",
+                        example: 0,
+                        description: "Calculated total carbohydrates (g).",
+                      },
+                      fat: {
+                        type: "number",
+                        format: "float",
+                        example: 5.42,
+                        description: "Calculated total fat (g).",
+                      },
+                      serving_type: {
+                        type: "string",
+                        example: "100 g",
+                        description: "Serving size used for base calculation.",
+                      },
+                    },
+                    required: [
+                      "meal_detail_id",
+                      "food_id",
+                      "name",
+                      "amount_grams",
+                      "calories",
+                      "protein",
+                      "carbs",
+                      "fat",
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          400: errorResponse(
+            "Bad Request: Missing meal_id.",
+            "meal_id is required."
+          ),
+          404: errorResponse("Not Found: Meal not found.", "Meal not found."),
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch data.",
+            "Failed to fetch meal nutrition."
+          ),
+        },
+      },
+    },
+    "/progress": {
+      get: {
+        tags: ["Progress"],
+        summary: "Retrieve user progress summaries or daily GR scores for a month",
+        description:
+          "If `user_id`, `year`, and `month` are provided, calculates and returns the daily Growth Rate (GR) score for each completed workout session within that month. Otherwise, it returns the aggregated user progress summaries.",
+        parameters: [
+          {
+            name: "user_id",
+            in: "query",
+            required: false,
+            type: "integer",
+            description: "The ID of the user. Required when fetching daily GR scores.",
+            example: 1,
+          },
+          {
+            name: "year",
+            in: "query",
+            required: false,
+            type: "integer",
+            description:
+              "The year for which to retrieve daily GR scores (e.g., 2024). Requires `user_id` and `month`.",
+            example: 2024,
+          },
+          {
+            name: "month",
+            in: "query",
+            required: false,
+            type: "integer",
+            description:
+              "The month (1-12) for which to retrieve daily GR scores. Requires `user_id` and `year`.",
+            example: 5,
+          },
+        ],
+        responses: {
+          200: {
+            description:
+              "Daily GR scores for the specified month OR a list of all user progress summaries.",
+            schema: {
+              type: "array",
+              items: {
+                oneOf: [
+                  {
+                    description: "Daily GR Score (if year/month provided)",
+                    type: "object",
+                    properties: {
+                      date: {
+                        type: "string",
+                        format: "date",
+                        example: "2024-05-15",
+                        description: "The date of the completed workout.",
+                      },
+                      gr_score: {
+                        type: "integer",
+                        example: 4500,
+                        description: "The calculated daily Growth Rate score.",
+                      },
+                    },
+                  },
+                  {
+                    description: "Progress Summary (if no date/month provided)",
+                    // Assuming a Progress Summary definition exists or is simple:
+                    type: "object",
+                    properties: {
+                      summary_id: { type: "integer" },
+                      user_id: { type: "integer" },
+                      period_start: { type: "string", format: "date" },
+                      total_volume_lifted: { type: "number" },
+                      // ... other summary fields
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          400: errorResponse(
+            "Bad Request: Invalid parameters.",
+            "Invalid user_id, year, or month. Month should be 1-12."
+          ),
+          404: errorResponse("Not Found: User not found.", "User not found."),
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch data.",
+            "Failed to fetch workouts."
+          ),
+        },
+      },
+    },
   },
 };
 
