@@ -1314,13 +1314,15 @@ const spec = {
             in: "query",
             required: false,
             type: "integer",
-            description: "Optional: ID of a specific workout plan to retrieve detailed information for.",
+            description:
+              "Optional: ID of a specific workout plan to retrieve detailed information for.",
             example: 1,
           },
         ],
         responses: {
           200: {
-            description: "A list of summarized workout plans (if no plan_id) or a single detailed workout plan.",
+            description:
+              "A list of summarized workout plans (if no plan_id) or a single detailed workout plan.",
             // This schema represents the single, detailed workout plan structure.
             // When listing all plans, the response is an array of objects containing only plan_id, name, description, and an array of plan_days with only day_number.
             schema: {
@@ -1345,7 +1347,8 @@ const spec = {
                         day_number: {
                           type: "integer",
                           example: 1,
-                          description: "The order of the day in the plan (1-7).",
+                          description:
+                            "The order of the day in the plan (1-7).",
                         },
                         day_type: {
                           type: "string",
@@ -1358,13 +1361,25 @@ const spec = {
                           items: {
                             type: "object",
                             properties: {
-                              plan_day_exercise_id: { type: "integer", example: 501 },
+                              plan_day_exercise_id: {
+                                type: "integer",
+                                example: 501,
+                              },
                               exercise_id: { type: "integer", example: 2 },
-                              sets: { type: "integer", nullable: true, example: 5 },
-                              reps: { type: "integer", nullable: true, example: 5 },
+                              sets: {
+                                type: "integer",
+                                nullable: true,
+                                example: 5,
+                              },
+                              reps: {
+                                type: "integer",
+                                nullable: true,
+                                example: 5,
+                              },
                               exercises: {
                                 type: "object",
-                                description: "Details of the associated exercise.",
+                                description:
+                                  "Details of the associated exercise.",
                                 properties: {
                                   exercise_id: { type: "integer", example: 2 },
                                   name: { type: "string", example: "Squat" },
@@ -1416,7 +1431,8 @@ const spec = {
                 user_id: {
                   type: "integer",
                   example: 1,
-                  description: "The ID of the user to apply the plan to (required).",
+                  description:
+                    "The ID of the user to apply the plan to (required).",
                 },
                 plan_id: {
                   type: "integer",
@@ -1427,7 +1443,8 @@ const spec = {
                   type: "string",
                   format: "date",
                   example: "2024-06-01",
-                  description: "The date the plan should start (YYYY-MM-DD) (required).",
+                  description:
+                    "The date the plan should start (YYYY-MM-DD) (required).",
                 },
               },
               required: ["user_id", "plan_id", "start_date"],
@@ -1450,6 +1467,308 @@ const spec = {
           500: errorResponse(
             "Internal Server Error: Failed to create sessions.",
             "Failed to create workout sessions from plan."
+          ),
+        },
+      },
+    },
+    "/workout-sessions": {
+      get: {
+        tags: ["Exercises"],
+        summary: "Retrieve a list of sessions or a single detailed session",
+        description:
+          "Fetches a list of workout sessions for a user, optionally filtered by month (YYYY-MM), or a single, detailed session by `session_id`. The detailed session includes all exercises and logs.",
+        parameters: [
+          {
+            name: "user_id",
+            in: "query",
+            required: false,
+            type: "integer",
+            description:
+              "ID of the user to retrieve sessions for. Required if session_id is not provided.",
+            example: 1,
+          },
+          {
+            name: "session_id",
+            in: "query",
+            required: false,
+            type: "integer",
+            description:
+              "ID of a specific session to retrieve details for. Overrides user_id/month filter.",
+            example: 101,
+          },
+          {
+            name: "month",
+            in: "query",
+            required: false,
+            type: "string",
+            format: "YYYY-MM",
+            description:
+              "Optional filter to restrict sessions to a specific month (e.g., '2024-05'). Requires user_id.",
+            example: "2024-05",
+          },
+        ],
+        responses: {
+          200: {
+            description:
+              "A single detailed workout session or a list of sessions.",
+            schema: {
+              type: "array",
+              description: "Array of workout sessions.",
+              items: {
+                type: "object",
+                properties: {
+                  session_id: { type: "integer", example: 101 },
+                  user_id: { type: "integer", example: 1 },
+                  scheduled_date: {
+                    type: "string",
+                    format: "date",
+                    example: "2024-05-20",
+                    description: "The planned date for the workout.",
+                  },
+                  completed: {
+                    type: "boolean",
+                    example: true,
+                    description:
+                      "True if the session has been marked complete.",
+                  },
+                  notes: {
+                    type: "string",
+                    example: "Plan day 1",
+                    description:
+                      "Notes or source of the session (e.g., Plan day X).",
+                  },
+                  session_details: {
+                    type: "array",
+                    description:
+                      "List of exercises planned/executed in the session.",
+                    items: {
+                      type: "object",
+                      properties: {
+                        session_detail_id: { type: "integer", example: 501 },
+                        exercise_id: { type: "integer", example: 2 },
+                        planned_sets: { type: "integer", example: 5 },
+                        planned_reps: { type: "integer", example: 5 },
+                        exercises: {
+                          type: "object",
+                          description: "Details of the associated exercise.",
+                          properties: {
+                            exercise_id: { type: "integer", example: 2 },
+                            name: { type: "string", example: "Squat" },
+                            category: { type: "string", example: "Legs" },
+                          },
+                          required: ["exercise_id", "name", "category"],
+                        },
+                        exercise_logs: {
+                          type: "array",
+                          description:
+                            "Logs of actual sets/reps/weight performed.",
+                          items: {
+                            type: "object",
+                            properties: {
+                              log_id: { type: "integer", example: 901 },
+                              actual_sets: { type: "integer", example: 5 },
+                              actual_reps: { type: "integer", example: 5 },
+                              weight_kg: { type: "number", example: 100.5 },
+                              log_timestamp: {
+                                type: "string",
+                                format: "date-time",
+                              },
+                            },
+                            required: ["log_id", "actual_sets", "actual_reps"],
+                          },
+                        },
+                      },
+                      required: ["session_detail_id", "exercise_id"],
+                    },
+                  },
+                },
+                required: [
+                  "session_id",
+                  "user_id",
+                  "scheduled_date",
+                  "completed",
+                ],
+              },
+            },
+          },
+          400: errorResponse(
+            "Bad Request: Missing ID.",
+            "user_id or session_id required."
+          ),
+          404: errorResponse(
+            "Not Found: Session(s) not found.",
+            "No sessions found for user/id."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch data.",
+            "Failed to fetch workout sessions."
+          ),
+        },
+      },
+      post: {
+        tags: ["Exercises"],
+        summary: "Create a session, add an exercise, or log a set/rep",
+        description:
+          "Handles three operations: 1. Creating a new empty workout session (`user_id` and `scheduled_date`). 2. Adding a planned exercise to an existing session (`session_id`, `exercise_id`, `planned_sets/reps`). 3. Logging a set/rep for an exercise slot (`session_detail_id`, `actual_sets/reps`, `weight_kg`).",
+        parameters: [
+          {
+            name: "Workout Operation",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              description:
+                "Input fields depend on the operation (create session, add exercise, or log set).",
+              properties: {
+                // Used for creating a new session
+                user_id: { type: "integer", example: 1 },
+                scheduled_date: {
+                  type: "string",
+                  format: "date",
+                  example: "2024-05-25",
+                },
+                // Used for adding an exercise to a session
+                session_id: { type: "integer", example: 101 },
+                exercise_id: { type: "integer", example: 2 },
+                planned_sets: { type: "integer", example: 3 },
+                planned_reps: { type: "integer", example: 8 },
+                // Used for logging a set/rep
+                session_detail_id: { type: "integer", example: 501 },
+                actual_sets: { type: "integer", example: 1 },
+                actual_reps: { type: "integer", example: 8 },
+                weight_kg: { type: "number", format: "float", example: 50.5 },
+              },
+            },
+          },
+        ],
+        responses: {
+          201: messageResponse(
+            "Operation successful.",
+            "Session created/Exercise added/Set logged successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing or invalid fields.",
+            "Missing required fields for the specified operation."
+          ),
+          404: errorResponse(
+            "Not Found: Entity not found.",
+            "User, session, or session detail not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to save data.",
+            "Failed to create session/add exercise/log set."
+          ),
+        },
+      },
+      put: {
+        tags: ["Exercises"],
+        summary: "Update session status or exercise details",
+        description:
+          "Updates an existing workout session (e.g., mark it as completed) or updates the planned sets/reps for a specific exercise within a session.",
+        parameters: [
+          {
+            name: "Update Session/Detail",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              description:
+                "Must contain either session_id for completion or session_detail_id for exercise update.",
+              properties: {
+                // Used for marking a session complete
+                session_id: {
+                  type: "integer",
+                  example: 101,
+                  description: "ID of the session to update.",
+                },
+                completed: {
+                  type: "boolean",
+                  example: true,
+                  description: "Set to true to mark session complete.",
+                },
+                // Used for updating planned reps/sets of an exercise detail
+                session_detail_id: {
+                  type: "integer",
+                  example: 501,
+                  description: "ID of the exercise detail to update.",
+                },
+                planned_sets: {
+                  type: "integer",
+                  example: 4,
+                  description: "New planned set count.",
+                },
+                planned_reps: {
+                  type: "integer",
+                  example: 6,
+                  description: "New planned rep count.",
+                },
+              },
+            },
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Update successful.",
+            "Session updated successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing ID or update field.",
+            "session_id or session_detail_id and an update field (like completed, planned_sets) are required."
+          ),
+          404: errorResponse(
+            "Not Found: Session/Detail not found.",
+            "Workout session or detail not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to update.",
+            "Failed to update workout session/detail."
+          ),
+        },
+      },
+      delete: {
+        tags: ["Exercises"],
+        summary: "Delete a session, an exercise, or a single log",
+        description:
+          "Deletes a full workout session (`session_id`), a specific exercise within a session (`session_detail_id`), or a single set/rep log (`log_id`). Only one ID should be provided.",
+        parameters: [
+          {
+            name: "session_id",
+            in: "query",
+            required: false,
+            type: "integer",
+            description: "ID of the full session to delete.",
+            example: 101,
+          },
+          {
+            name: "session_detail_id",
+            in: "query",
+            required: false,
+            type: "integer",
+            description:
+              "ID of the exercise detail (one exercise slot) to delete from the session.",
+            example: 501,
+          },
+          {
+            name: "log_id",
+            in: "query",
+            required: false,
+            type: "integer",
+            description: "ID of a single set/rep log entry to delete.",
+            example: 901,
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Deletion successful.",
+            "Entity deleted successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing ID.",
+            "One of session_id, session_detail_id, or log_id is required."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to delete.",
+            "Failed to delete entity."
           ),
         },
       },
