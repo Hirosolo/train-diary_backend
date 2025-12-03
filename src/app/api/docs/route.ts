@@ -101,6 +101,82 @@ const spec = {
         },
       },
     },
+    "/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Registers a new user account",
+        "description": "Creates a new user account by accepting a username, email, and password. The password is hashed before storage.",
+        "parameters": [
+          {
+            "name": "Registration Data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "username": {
+                  "type": "string",
+                  "example": "newuser",
+                  "description": "Desired username.",
+                },
+                "email": {
+                  "type": "string",
+                  "format": "email",
+                  "example": "newuser@example.com",
+                  "description": "User's unique email address.",
+                },
+                "password": {
+                  "type": "string",
+                  "format": "password",
+                  "example": "securePassword123",
+                  "description": "Desired password.",
+                },
+              },
+              "required": ["username", "email", "password"],
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "User registered successfully.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": { "type": "string", "example": "User registered successfully." }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request: Missing required fields.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": { "type": "string", "example": "All fields are required." }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict: Email already in use.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": { "type": "string", "example": "Email already in use." }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error: Registration failed.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": { "type": "string", "example": "Registration failed." },
+                "error": { "type": "string", "description": "Database or server error message." }
+              }
+            }
+          }
+        }
+      }
+    },
   },
 };
 
