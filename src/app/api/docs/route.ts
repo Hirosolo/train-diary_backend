@@ -564,6 +564,49 @@ const spec = {
         },
       },
     },
+    "/food-logs/daily-intake": {
+      get: {
+        tags: ["Food Logs"],
+        summary: "Calculate daily total macronutrients and calories",
+        description:
+          "Calculates the total caloric and macronutrient intake (Protein, Carbs, Fat) for a specific user on a given date.",
+        parameters: [
+          {
+            name: "user_id",
+            in: "query",
+            required: true,
+            type: "integer",
+            description: "The ID of the user for whom to calculate intake.",
+            example: 1,
+          },
+          {
+            name: "date",
+            in: "query",
+            required: true,
+            type: "string",
+            format: "date",
+            description: "The date for the calculation (YYYY-MM-DD).",
+            example: "2024-05-15",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Daily intake totals summary.",
+            schema: {
+              $ref: "#/definitions/DailyIntakeSummary",
+            },
+          },
+          400: errorResponse(
+            "Bad Request: Missing user_id or date.",
+            "user_id and date are required."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to calculate intake.",
+            "Failed to calculate daily intake."
+          ),
+        },
+      },
+    },
   },
 };
 
