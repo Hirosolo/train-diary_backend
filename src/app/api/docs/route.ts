@@ -48,7 +48,8 @@ const spec = {
       post: {
         tags: ["Auth"],
         summary: "Logs in a user and returns a JWT token",
-        description: "Authenticates a user using email and password, issuing a time-limited JSON Web Token (JWT).",
+        description:
+          "Authenticates a user using email and password, issuing a time-limited JSON Web Token (JWT).",
         parameters: [
           {
             name: "Login Credentials",
@@ -82,100 +83,250 @@ const spec = {
               properties: {
                 token: {
                   type: "string",
-                  description: "The authentication JWT. This should be stored securely and used for subsequent requests.",
+                  description:
+                    "The authentication JWT. This should be stored securely and used for subsequent requests.",
                 },
                 user: {
                   type: "object",
                   properties: {
                     user_id: { type: "string", example: "uuid-12345" },
                     username: { type: "string", example: "testuser" },
-                    email: { type: "string", format: "email", example: "testuser@example.com" },
+                    email: {
+                      type: "string",
+                      format: "email",
+                      example: "testuser@example.com",
+                    },
                   },
                 },
               },
             },
           },
-          400: errorResponse("Bad Request: Missing email or password.", "Email and password required."),
-          401: errorResponse("Unauthorized: Invalid credentials.", "User not found. "),
-          403: errorResponse("Unauthorized: Invalid credentials.", "Wrong password."),
+          400: errorResponse(
+            "Bad Request: Missing email or password.",
+            "Email and password required."
+          ),
+          401: errorResponse(
+            "Unauthorized: Invalid credentials.",
+            "User not found. "
+          ),
+          403: errorResponse(
+            "Unauthorized: Invalid credentials.",
+            "Wrong password."
+          ),
         },
       },
     },
     "/auth/register": {
-      "post": {
-        "tags": ["Auth"],
-        "summary": "Registers a new user account",
-        "description": "Creates a new user account by accepting a username, email, and password. The password is hashed before storage.",
-        "parameters": [
+      post: {
+        tags: ["Auth"],
+        summary: "Registers a new user account",
+        description:
+          "Creates a new user account by accepting a username, email, and password. The password is hashed before storage.",
+        parameters: [
           {
-            "name": "Registration Data",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "username": {
-                  "type": "string",
-                  "example": "newuser",
-                  "description": "Desired username.",
+            name: "Registration Data",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                username: {
+                  type: "string",
+                  example: "newuser",
+                  description: "Desired username.",
                 },
-                "email": {
-                  "type": "string",
-                  "format": "email",
-                  "example": "newuser@example.com",
-                  "description": "User's unique email address.",
+                email: {
+                  type: "string",
+                  format: "email",
+                  example: "newuser@example.com",
+                  description: "User's unique email address.",
                 },
-                "password": {
-                  "type": "string",
-                  "format": "password",
-                  "example": "securePassword123",
-                  "description": "Desired password.",
+                password: {
+                  type: "string",
+                  format: "password",
+                  example: "securePassword123",
+                  description: "Desired password.",
                 },
               },
-              "required": ["username", "email", "password"],
-            }
-          }
+              required: ["username", "email", "password"],
+            },
+          },
         ],
-        "responses": {
+        responses: {
           "201": {
-            "description": "User registered successfully.",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "message": { "type": "string", "example": "User registered successfully." }
-              }
-            }
+            description: "User registered successfully.",
+            schema: {
+              type: "object",
+              properties: {
+                message: {
+                  type: "string",
+                  example: "User registered successfully.",
+                },
+              },
+            },
           },
           "400": {
-            "description": "Bad Request: Missing required fields.",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "message": { "type": "string", "example": "All fields are required." }
-              }
-            }
+            description: "Bad Request: Missing required fields.",
+            schema: {
+              type: "object",
+              properties: {
+                message: {
+                  type: "string",
+                  example: "All fields are required.",
+                },
+              },
+            },
           },
           "409": {
-            "description": "Conflict: Email already in use.",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "message": { "type": "string", "example": "Email already in use." }
-              }
-            }
+            description: "Conflict: Email already in use.",
+            schema: {
+              type: "object",
+              properties: {
+                message: { type: "string", example: "Email already in use." },
+              },
+            },
           },
           "500": {
-            "description": "Internal Server Error: Registration failed.",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "message": { "type": "string", "example": "Registration failed." },
-                "error": { "type": "string", "description": "Database or server error message." }
-              }
-            }
-          }
-        }
-      }
+            description: "Internal Server Error: Registration failed.",
+            schema: {
+              type: "object",
+              properties: {
+                message: { type: "string", example: "Registration failed." },
+                error: {
+                  type: "string",
+                  description: "Database or server error message.",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/exercises": {
+      get: {
+        tags: ["Exercises"],
+        summary: "Retrieve all available exercises",
+        description: "Fetches a list of all exercises stored in the database.",
+        responses: {
+          200: {
+            description: "A list of exercises.",
+            schema: {
+              type: "array",
+              items: {
+                $ref: "#/definitions/Exercise",
+              },
+            },
+          },
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch data.",
+            "Failed to fetch exercises."
+          ),
+        },
+      },
+      post: {
+        tags: ["Exercises"],
+        summary: "Add a new exercise",
+        description:
+          "Creates and stores a new exercise definition. Exercise name must be unique.",
+        parameters: [
+          {
+            name: "New Exercise Object",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                name: {
+                  type: "string",
+                  example: "Deadlift",
+                  description: "Name of the exercise (required).",
+                },
+                category: {
+                  type: "string",
+                  example: "Back/Hamstrings",
+                  description: "Muscle group.",
+                },
+                default_sets: {
+                  type: "integer",
+                  example: 5,
+                  description: "Suggested sets.",
+                },
+                default_reps: {
+                  type: "integer",
+                  example: 5,
+                  description: "Suggested reps.",
+                },
+                description: {
+                  type: "string",
+                  description: "Instructions for the exercise.",
+                },
+              },
+              required: ["name"],
+            },
+          },
+        ],
+        responses: {
+          201: {
+            description: "Exercise successfully added.",
+            schema: {
+              type: "object",
+              properties: {
+                exercise_id: { type: "string", example: "uuid-new-789" },
+                message: { type: "string", example: "Exercise added." },
+              },
+            },
+          },
+          400: errorResponse(
+            "Bad Request: Missing required field.",
+            "Exercise name is required."
+          ),
+          409: errorResponse(
+            "Conflict: Exercise name already exists.",
+            "Exercise with this name already exists."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to add exercise.",
+            "Failed to add exercise."
+          ),
+        },
+      },
+      delete: {
+        tags: ["Exercises"],
+        summary: "Delete an exercise by ID",
+        description:
+          "Deletes a single exercise from the database using its unique ID.",
+        parameters: [
+          {
+            name: "Exercise ID",
+            in: "body",
+            required: true,
+            schema: {
+              type: "string",
+              example: "uuid-12345",
+              description:
+                "The unique ID of the exercise to delete (JSON body).",
+            },
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Exercise successfully deleted.",
+            "Exercise deleted."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing ID.",
+            "Exercise ID is required."
+          ),
+          404: errorResponse(
+            "Not Found: Exercise does not exist.",
+            "Exercise not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to delete exercise.",
+            "Failed to delete exercise."
+          ),
+        },
+      },
     },
   },
 };
@@ -214,13 +365,13 @@ export async function GET() {
       </html>
     `;
 
-    return new Response(html, { 
-      headers: { 
+    return new Response(html, {
+      headers: {
         "Content-Type": "text/html",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization"
-      } 
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      },
     });
   } catch (error: unknown) {
     const message =
