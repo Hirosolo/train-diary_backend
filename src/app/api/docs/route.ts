@@ -841,31 +841,91 @@ const spec = {
         responses: {
           200: {
             description: "The requested meal detail entry.",
-            schema: 
-            {
+            schema: {
               type: "object",
-              description: "A detailed entry for a single food item logged within a meal.",
+              description:
+                "A detailed entry for a single food item logged within a meal.",
               properties: {
-                meal_detail_id: { type: "integer", example: 101, description: "Unique identifier for this specific food entry (meal detail)." },
-                meal_id: { type: "integer", example: 50, description: "The ID of the parent meal log." },
-                amount_grams: { type: "number", format: "float", example: 150.5, description: "The amount of the food item consumed, in grams." },
+                meal_detail_id: {
+                  type: "integer",
+                  example: 101,
+                  description:
+                    "Unique identifier for this specific food entry (meal detail).",
+                },
+                meal_id: {
+                  type: "integer",
+                  example: 50,
+                  description: "The ID of the parent meal log.",
+                },
+                amount_grams: {
+                  type: "number",
+                  format: "float",
+                  example: 150.5,
+                  description:
+                    "The amount of the food item consumed, in grams.",
+                },
                 food: {
                   type: "object",
                   description: "Details of the associated food item.",
                   properties: {
-                    food_id: { type: "integer", example: 1, description: "Unique ID of the food item in the master 'foods' table." },
-                    name: { type: "string", example: "Chicken Breast", description: "Name of the food." },
-                    calories_per_serving: { type: "number", format: "float", example: 165, description: "Calories per serving (based on the serving_type)." },
-                    protein_per_serving: { type: "number", format: "float", example: 31, description: "Protein (g) per serving." },
-                    carbs_per_serving: { type: "number", format: "float", example: 0, description: "Carbohydrates (g) per serving." },
-                    fat_per_serving: { type: "number", format: "float", example: 3.6, description: "Fat (g) per serving." },
-                    serving_type: { type: "string", example: "100 g", description: "Description of the serving size (e.g., '100 g', '1 cup')." },
-                    image: { type: "string", description: "Optional image URL for the food item.", example: "https://example.com/chicken.jpg" }
+                    food_id: {
+                      type: "integer",
+                      example: 1,
+                      description:
+                        "Unique ID of the food item in the master 'foods' table.",
+                    },
+                    name: {
+                      type: "string",
+                      example: "Chicken Breast",
+                      description: "Name of the food.",
+                    },
+                    calories_per_serving: {
+                      type: "number",
+                      format: "float",
+                      example: 165,
+                      description:
+                        "Calories per serving (based on the serving_type).",
+                    },
+                    protein_per_serving: {
+                      type: "number",
+                      format: "float",
+                      example: 31,
+                      description: "Protein (g) per serving.",
+                    },
+                    carbs_per_serving: {
+                      type: "number",
+                      format: "float",
+                      example: 0,
+                      description: "Carbohydrates (g) per serving.",
+                    },
+                    fat_per_serving: {
+                      type: "number",
+                      format: "float",
+                      example: 3.6,
+                      description: "Fat (g) per serving.",
+                    },
+                    serving_type: {
+                      type: "string",
+                      example: "100 g",
+                      description:
+                        "Description of the serving size (e.g., '100 g', '1 cup').",
+                    },
+                    image: {
+                      type: "string",
+                      description: "Optional image URL for the food item.",
+                      example: "https://example.com/chicken.jpg",
+                    },
                   },
-                  required: ["name", "calories_per_serving", "protein_per_serving", "carbs_per_serving", "fat_per_serving"]
-                }
+                  required: [
+                    "name",
+                    "calories_per_serving",
+                    "protein_per_serving",
+                    "carbs_per_serving",
+                    "fat_per_serving",
+                  ],
+                },
               },
-              required: ["meal_detail_id", "meal_id", "amount_grams", "food"]
+              required: ["meal_detail_id", "meal_id", "amount_grams", "food"],
             }, // Using the full inline schema defined above
           },
           400: errorResponse(
@@ -895,13 +955,15 @@ const spec = {
             in: "query",
             required: true,
             type: "integer",
-            description: "The ID of the meal log for which to calculate nutrition.",
+            description:
+              "The ID of the meal log for which to calculate nutrition.",
             example: 50,
           },
         ],
         responses: {
           200: {
-            description: "Nutritional breakdown for each food item in the meal.",
+            description:
+              "Nutritional breakdown for each food item in the meal.",
             schema: {
               type: "object",
               properties: {
@@ -998,7 +1060,8 @@ const spec = {
     "/progress": {
       get: {
         tags: ["Progress"],
-        summary: "Retrieve user progress summaries or daily GR scores for a month",
+        summary:
+          "Retrieve user progress summaries or daily GR scores for a month",
         description:
           "If `user_id`, `year`, and `month` are provided, calculates and returns the daily Growth Rate (GR) score for each completed workout session within that month. Otherwise, it returns the aggregated user progress summaries.",
         parameters: [
@@ -1007,7 +1070,8 @@ const spec = {
             in: "query",
             required: false,
             type: "integer",
-            description: "The ID of the user. Required when fetching daily GR scores.",
+            description:
+              "The ID of the user. Required when fetching daily GR scores.",
             example: 1,
           },
           {
@@ -1078,6 +1142,633 @@ const spec = {
           500: errorResponse(
             "Internal Server Error: Failed to fetch data.",
             "Failed to fetch workouts."
+          ),
+        },
+      },
+    },
+    "/summary": {
+      get: {
+        tags: ["Progress"],
+        summary: "Retrieve user's fitness and nutrition summary for a period",
+        description:
+          "Calculates and returns a comprehensive summary of a user's fitness and nutrition metrics (workouts, calories, macros, GR score) for a specified weekly or monthly period. The summary is freshly generated by default.",
+        parameters: [
+          {
+            name: "user_id",
+            in: "query",
+            required: true,
+            type: "integer",
+            description: "The ID of the user.",
+            example: 1,
+          },
+          {
+            name: "period_type",
+            in: "query",
+            required: true,
+            type: "string",
+            enum: ["weekly", "monthly"],
+            description:
+              "The duration of the summary period ('weekly' or 'monthly').",
+            example: "weekly",
+          },
+          {
+            name: "period_start",
+            in: "query",
+            required: true,
+            type: "string",
+            format: "date",
+            description: "The start date of the period (YYYY-MM-DD).",
+            example: "2024-05-01",
+          },
+        ],
+        responses: {
+          200: {
+            description: "A comprehensive summary of user progress.",
+            schema: {
+              $ref: "#/definitions/SummaryPayload",
+            },
+          },
+          400: errorResponse(
+            "Bad Request: Missing required parameters.",
+            "user_id, period_type, and period_start are required."
+          ),
+          404: errorResponse("Not Found: User not found.", "User not found."),
+          500: errorResponse(
+            "Internal Server Error: Failed to generate summary.",
+            "Failed to get summary."
+          ),
+        },
+      },
+      post: {
+        tags: ["Progress"],
+        summary: "Generate and save a new user summary for a period",
+        description:
+          "Triggers the calculation, generation, and storage of a user's summary for a specified period (weekly or monthly). The generated summary is also returned.",
+        parameters: [
+          {
+            name: "Summary Generation Request",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                user_id: {
+                  type: "integer",
+                  example: 1,
+                  description: "The ID of the user (required).",
+                },
+                period_type: {
+                  type: "string",
+                  enum: ["weekly", "monthly"],
+                  example: "monthly",
+                  description: "The duration of the summary period (required).",
+                },
+                period_start: {
+                  type: "string",
+                  format: "date",
+                  example: "2024-05-01",
+                  description:
+                    "The start date of the period (YYYY-MM-DD) (required).",
+                },
+              },
+              required: ["user_id", "period_type", "period_start"],
+            },
+          },
+        ],
+        responses: {
+          201: {
+            description: "Summary generated and saved successfully.",
+            schema: {
+              $ref: "#/definitions/SummaryPayload",
+            },
+          },
+          400: errorResponse(
+            "Bad Request: Missing required fields.",
+            "user_id, period_type, and period_start are required."
+          ),
+          404: errorResponse("Not Found: User not found.", "User not found."),
+          500: errorResponse(
+            "Internal Server Error: Failed to generate summary.",
+            "Failed to generate summary."
+          ),
+        },
+      },
+    },
+    "/users": {
+      get: {
+        tags: ["Auth"],
+        summary: "Retrieve a list of all users",
+        description:
+          "Fetches a comprehensive list of all registered users from the database. Note: In a production environment, this endpoint would typically require strong admin authentication or be limited to a single user query.",
+        responses: {
+          200: {
+            description: "A list of user objects.",
+            schema: {
+              type: "array",
+              items: {
+                type: "object",
+                description: "A user account object.",
+                properties: {
+                  user_id: {
+                    type: "integer",
+                    example: 1,
+                    description: "Unique ID of the user.",
+                  },
+                  username: {
+                    type: "string",
+                    example: "john_doe",
+                    description: "The user's username.",
+                  },
+                  email: {
+                    type: "string",
+                    format: "email",
+                    example: "john.doe@example.com",
+                    description: "The user's email address.",
+                  },
+                  created_at: {
+                    type: "string",
+                    format: "date-time",
+                    description: "Timestamp of user creation.",
+                  },
+                },
+                required: ["user_id", "username", "email"],
+              },
+            },
+          },
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch data.",
+            "Failed to fetch users."
+          ),
+        },
+      },
+    },
+    "/workout-plans": {
+      get: {
+        tags: ["Exercises"],
+        summary: "Retrieve all workout plans or a specific plan's details",
+        description:
+          "If no `plan_id` is provided, returns a list of all available workout plans with their names, descriptions, and number of days. If a `plan_id` is provided, returns the single, detailed plan including all exercises.",
+        parameters: [
+          {
+            name: "plan_id",
+            in: "query",
+            required: false,
+            type: "integer",
+            description:
+              "Optional: ID of a specific workout plan to retrieve detailed information for.",
+            example: 1,
+          },
+        ],
+        responses: {
+          200: {
+            description:
+              "A list of summarized workout plans (if no plan_id) or a single detailed workout plan.",
+            // This schema represents the single, detailed workout plan structure.
+            // When listing all plans, the response is an array of objects containing only plan_id, name, description, and an array of plan_days with only day_number.
+            schema: {
+              type: "array",
+              items: {
+                type: "object",
+                description: "A detailed workout plan object.",
+                properties: {
+                  plan_id: { type: "integer", example: 1 },
+                  name: { type: "string", example: "5x5 Strength Program" },
+                  description: {
+                    type: "string",
+                    example: "A classic full-body strength routine.",
+                  },
+                  plan_days: {
+                    type: "array",
+                    description: "Details for each day in the plan.",
+                    items: {
+                      type: "object",
+                      properties: {
+                        plan_day_id: { type: "integer", example: 101 },
+                        day_number: {
+                          type: "integer",
+                          example: 1,
+                          description:
+                            "The order of the day in the plan (1-7).",
+                        },
+                        day_type: {
+                          type: "string",
+                          nullable: true,
+                          example: "Workout A",
+                        },
+                        plan_day_exercises: {
+                          type: "array",
+                          description: "Exercises scheduled for this day.",
+                          items: {
+                            type: "object",
+                            properties: {
+                              plan_day_exercise_id: {
+                                type: "integer",
+                                example: 501,
+                              },
+                              exercise_id: { type: "integer", example: 2 },
+                              sets: {
+                                type: "integer",
+                                nullable: true,
+                                example: 5,
+                              },
+                              reps: {
+                                type: "integer",
+                                nullable: true,
+                                example: 5,
+                              },
+                              exercises: {
+                                type: "object",
+                                description:
+                                  "Details of the associated exercise.",
+                                properties: {
+                                  exercise_id: { type: "integer", example: 2 },
+                                  name: { type: "string", example: "Squat" },
+                                  category: { type: "string", example: "Legs" },
+                                  description: { type: "string" },
+                                },
+                                required: ["exercise_id", "name", "category"],
+                              },
+                            },
+                            required: ["exercise_id", "sets", "reps"],
+                          },
+                        },
+                      },
+                      required: ["plan_day_id", "day_number"],
+                    },
+                  },
+                },
+                required: ["plan_id", "name", "description"],
+              },
+            },
+          },
+          400: errorResponse(
+            "Bad Request: Invalid plan_id.",
+            "Invalid plan_id provided."
+          ),
+          404: errorResponse(
+            "Not Found: Workout plan does not exist.",
+            "Workout plan not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch data.",
+            "Failed to fetch workout plans."
+          ),
+        },
+      },
+      post: {
+        tags: ["Exercises"],
+        summary: "Apply a workout plan to a user's schedule",
+        description:
+          "Creates scheduled workout sessions for a user, based on a specified `plan_id`, starting on a given `start_date` and spanning the duration of the plan.",
+        parameters: [
+          {
+            name: "Apply Plan Request",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                user_id: {
+                  type: "integer",
+                  example: 1,
+                  description:
+                    "The ID of the user to apply the plan to (required).",
+                },
+                plan_id: {
+                  type: "integer",
+                  example: 1,
+                  description: "The ID of the plan to apply (required).",
+                },
+                start_date: {
+                  type: "string",
+                  format: "date",
+                  example: "2024-06-01",
+                  description:
+                    "The date the plan should start (YYYY-MM-DD) (required).",
+                },
+              },
+              required: ["user_id", "plan_id", "start_date"],
+            },
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Plan successfully applied and sessions created.",
+            "Workout plan successfully applied, 3 sessions created starting 2024-06-01."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing required fields.",
+            "user_id, plan_id, and start_date are required."
+          ),
+          404: errorResponse(
+            "Not Found: User or Plan not found.",
+            "User or workout plan not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to create sessions.",
+            "Failed to create workout sessions from plan."
+          ),
+        },
+      },
+    },
+    "/workout-sessions": {
+      get: {
+        tags: ["Exercises"],
+        summary: "Retrieve a list of sessions or a single detailed session",
+        description:
+          "Fetches a list of workout sessions for a user, optionally filtered by month (YYYY-MM), or a single, detailed session by `session_id`. The detailed session includes all exercises and logs.",
+        parameters: [
+          {
+            name: "user_id",
+            in: "query",
+            required: false,
+            type: "integer",
+            description:
+              "ID of the user to retrieve sessions for. Required if session_id is not provided.",
+            example: 1,
+          },
+          {
+            name: "session_id",
+            in: "query",
+            required: false,
+            type: "integer",
+            description:
+              "ID of a specific session to retrieve details for. Overrides user_id/month filter.",
+            example: 101,
+          },
+          {
+            name: "month",
+            in: "query",
+            required: false,
+            type: "string",
+            format: "YYYY-MM",
+            description:
+              "Optional filter to restrict sessions to a specific month (e.g., '2024-05'). Requires user_id.",
+            example: "2024-05",
+          },
+        ],
+        responses: {
+          200: {
+            description:
+              "A single detailed workout session or a list of sessions.",
+            schema: {
+              type: "array",
+              description: "Array of workout sessions.",
+              items: {
+                type: "object",
+                properties: {
+                  session_id: { type: "integer", example: 101 },
+                  user_id: { type: "integer", example: 1 },
+                  scheduled_date: {
+                    type: "string",
+                    format: "date",
+                    example: "2024-05-20",
+                    description: "The planned date for the workout.",
+                  },
+                  completed: {
+                    type: "boolean",
+                    example: true,
+                    description:
+                      "True if the session has been marked complete.",
+                  },
+                  notes: {
+                    type: "string",
+                    example: "Plan day 1",
+                    description:
+                      "Notes or source of the session (e.g., Plan day X).",
+                  },
+                  session_details: {
+                    type: "array",
+                    description:
+                      "List of exercises planned/executed in the session.",
+                    items: {
+                      type: "object",
+                      properties: {
+                        session_detail_id: { type: "integer", example: 501 },
+                        exercise_id: { type: "integer", example: 2 },
+                        planned_sets: { type: "integer", example: 5 },
+                        planned_reps: { type: "integer", example: 5 },
+                        exercises: {
+                          type: "object",
+                          description: "Details of the associated exercise.",
+                          properties: {
+                            exercise_id: { type: "integer", example: 2 },
+                            name: { type: "string", example: "Squat" },
+                            category: { type: "string", example: "Legs" },
+                          },
+                          required: ["exercise_id", "name", "category"],
+                        },
+                        exercise_logs: {
+                          type: "array",
+                          description:
+                            "Logs of actual sets/reps/weight performed.",
+                          items: {
+                            type: "object",
+                            properties: {
+                              log_id: { type: "integer", example: 901 },
+                              actual_sets: { type: "integer", example: 5 },
+                              actual_reps: { type: "integer", example: 5 },
+                              weight_kg: { type: "number", example: 100.5 },
+                              log_timestamp: {
+                                type: "string",
+                                format: "date-time",
+                              },
+                            },
+                            required: ["log_id", "actual_sets", "actual_reps"],
+                          },
+                        },
+                      },
+                      required: ["session_detail_id", "exercise_id"],
+                    },
+                  },
+                },
+                required: [
+                  "session_id",
+                  "user_id",
+                  "scheduled_date",
+                  "completed",
+                ],
+              },
+            },
+          },
+          400: errorResponse(
+            "Bad Request: Missing ID.",
+            "user_id or session_id required."
+          ),
+          404: errorResponse(
+            "Not Found: Session(s) not found.",
+            "No sessions found for user/id."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch data.",
+            "Failed to fetch workout sessions."
+          ),
+        },
+      },
+      post: {
+        tags: ["Exercises"],
+        summary: "Create a session, add an exercise, or log a set/rep",
+        description:
+          "Handles three operations: 1. Creating a new empty workout session (`user_id` and `scheduled_date`). 2. Adding a planned exercise to an existing session (`session_id`, `exercise_id`, `planned_sets/reps`). 3. Logging a set/rep for an exercise slot (`session_detail_id`, `actual_sets/reps`, `weight_kg`).",
+        parameters: [
+          {
+            name: "Workout Operation",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              description:
+                "Input fields depend on the operation (create session, add exercise, or log set).",
+              properties: {
+                // Used for creating a new session
+                user_id: { type: "integer", example: 1 },
+                scheduled_date: {
+                  type: "string",
+                  format: "date",
+                  example: "2024-05-25",
+                },
+                // Used for adding an exercise to a session
+                session_id: { type: "integer", example: 101 },
+                exercise_id: { type: "integer", example: 2 },
+                planned_sets: { type: "integer", example: 3 },
+                planned_reps: { type: "integer", example: 8 },
+                // Used for logging a set/rep
+                session_detail_id: { type: "integer", example: 501 },
+                actual_sets: { type: "integer", example: 1 },
+                actual_reps: { type: "integer", example: 8 },
+                weight_kg: { type: "number", format: "float", example: 50.5 },
+              },
+            },
+          },
+        ],
+        responses: {
+          201: messageResponse(
+            "Operation successful.",
+            "Session created/Exercise added/Set logged successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing or invalid fields.",
+            "Missing required fields for the specified operation."
+          ),
+          404: errorResponse(
+            "Not Found: Entity not found.",
+            "User, session, or session detail not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to save data.",
+            "Failed to create session/add exercise/log set."
+          ),
+        },
+      },
+      put: {
+        tags: ["Exercises"],
+        summary: "Update session status or exercise details",
+        description:
+          "Updates an existing workout session (e.g., mark it as completed) or updates the planned sets/reps for a specific exercise within a session.",
+        parameters: [
+          {
+            name: "Update Session/Detail",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              description:
+                "Must contain either session_id for completion or session_detail_id for exercise update.",
+              properties: {
+                // Used for marking a session complete
+                session_id: {
+                  type: "integer",
+                  example: 101,
+                  description: "ID of the session to update.",
+                },
+                completed: {
+                  type: "boolean",
+                  example: true,
+                  description: "Set to true to mark session complete.",
+                },
+                // Used for updating planned reps/sets of an exercise detail
+                session_detail_id: {
+                  type: "integer",
+                  example: 501,
+                  description: "ID of the exercise detail to update.",
+                },
+                planned_sets: {
+                  type: "integer",
+                  example: 4,
+                  description: "New planned set count.",
+                },
+                planned_reps: {
+                  type: "integer",
+                  example: 6,
+                  description: "New planned rep count.",
+                },
+              },
+            },
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Update successful.",
+            "Session updated successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing ID or update field.",
+            "session_id or session_detail_id and an update field (like completed, planned_sets) are required."
+          ),
+          404: errorResponse(
+            "Not Found: Session/Detail not found.",
+            "Workout session or detail not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to update.",
+            "Failed to update workout session/detail."
+          ),
+        },
+      },
+      delete: {
+        tags: ["Exercises"],
+        summary: "Delete a session, an exercise, or a single log",
+        description:
+          "Deletes a full workout session (`session_id`), a specific exercise within a session (`session_detail_id`), or a single set/rep log (`log_id`). Only one ID should be provided.",
+        parameters: [
+          {
+            name: "session_id",
+            in: "query",
+            required: false,
+            type: "integer",
+            description: "ID of the full session to delete.",
+            example: 101,
+          },
+          {
+            name: "session_detail_id",
+            in: "query",
+            required: false,
+            type: "integer",
+            description:
+              "ID of the exercise detail (one exercise slot) to delete from the session.",
+            example: 501,
+          },
+          {
+            name: "log_id",
+            in: "query",
+            required: false,
+            type: "integer",
+            description: "ID of a single set/rep log entry to delete.",
+            example: 901,
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Deletion successful.",
+            "Entity deleted successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing ID.",
+            "One of session_id, session_detail_id, or log_id is required."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to delete.",
+            "Failed to delete entity."
           ),
         },
       },
