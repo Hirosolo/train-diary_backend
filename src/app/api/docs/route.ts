@@ -1039,6 +1039,118 @@ const spec = {
         },
       },
     },
+    "/meal-details/nutrition": {
+      get: {
+        tags: ["Meal Details"],
+        summary: "Calculate and retrieve food-level nutrition for a meal",
+        description:
+          "Calculates the Calories, Protein, Carbs, and Fat for each food item logged in a specific meal, based on the amount consumed (amount_grams) and the food's serving details.",
+        parameters: [
+          {
+            name: "meal_id",
+            in: "query",
+            required: true,
+            type: "integer",
+            description: "The ID of the meal log for which to calculate nutrition.",
+            example: 50,
+          },
+        ],
+        responses: {
+          200: {
+            description: "Nutritional breakdown for each food item in the meal.",
+            schema: {
+              type: "object",
+              properties: {
+                meal_id: {
+                  type: "integer",
+                  example: 50,
+                  description: "The ID of the meal.",
+                },
+                foods: {
+                  type: "array",
+                  description:
+                    "A list of food items in the meal with calculated nutrition.",
+                  items: {
+                    type: "object",
+                    properties: {
+                      meal_detail_id: {
+                        type: "integer",
+                        example: 101,
+                        description: "The unique ID of the food entry.",
+                      },
+                      food_id: {
+                        type: "integer",
+                        example: 1,
+                        description: "ID of the food item.",
+                      },
+                      name: {
+                        type: "string",
+                        example: "Chicken Breast",
+                        description: "Name of the food item.",
+                      },
+                      amount_grams: {
+                        type: "number",
+                        format: "float",
+                        example: 150.5,
+                        description: "Amount consumed in grams.",
+                      },
+                      calories: {
+                        type: "number",
+                        format: "float",
+                        example: 248.33,
+                        description: "Calculated total calories.",
+                      },
+                      protein: {
+                        type: "number",
+                        format: "float",
+                        example: 46.66,
+                        description: "Calculated total protein (g).",
+                      },
+                      carbs: {
+                        type: "number",
+                        format: "float",
+                        example: 0,
+                        description: "Calculated total carbohydrates (g).",
+                      },
+                      fat: {
+                        type: "number",
+                        format: "float",
+                        example: 5.42,
+                        description: "Calculated total fat (g).",
+                      },
+                      serving_type: {
+                        type: "string",
+                        example: "100 g",
+                        description: "Serving size used for base calculation.",
+                      },
+                    },
+                    required: [
+                      "meal_detail_id",
+                      "food_id",
+                      "name",
+                      "amount_grams",
+                      "calories",
+                      "protein",
+                      "carbs",
+                      "fat",
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          400: errorResponse(
+            "Bad Request: Missing meal_id.",
+            "meal_id is required."
+          ),
+          404: errorResponse("Not Found: Meal not found.", "Meal not found."),
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch data.",
+            "Failed to fetch meal nutrition."
+          ),
+        },
+      },
+    },
   },
 };
 
