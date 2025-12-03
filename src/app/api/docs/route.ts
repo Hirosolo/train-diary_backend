@@ -1302,6 +1302,158 @@ const spec = {
         },
       },
     },
+    "/workout-plans": {
+      get: {
+        tags: ["Exercises"],
+        summary: "Retrieve all workout plans or a specific plan's details",
+        description:
+          "If no `plan_id` is provided, returns a list of all available workout plans with their names, descriptions, and number of days. If a `plan_id` is provided, returns the single, detailed plan including all exercises.",
+        parameters: [
+          {
+            name: "plan_id",
+            in: "query",
+            required: false,
+            type: "integer",
+            description: "Optional: ID of a specific workout plan to retrieve detailed information for.",
+            example: 1,
+          },
+        ],
+        responses: {
+          200: {
+            description: "A list of summarized workout plans (if no plan_id) or a single detailed workout plan.",
+            // This schema represents the single, detailed workout plan structure.
+            // When listing all plans, the response is an array of objects containing only plan_id, name, description, and an array of plan_days with only day_number.
+            schema: {
+              type: "array",
+              items: {
+                type: "object",
+                description: "A detailed workout plan object.",
+                properties: {
+                  plan_id: { type: "integer", example: 1 },
+                  name: { type: "string", example: "5x5 Strength Program" },
+                  description: {
+                    type: "string",
+                    example: "A classic full-body strength routine.",
+                  },
+                  plan_days: {
+                    type: "array",
+                    description: "Details for each day in the plan.",
+                    items: {
+                      type: "object",
+                      properties: {
+                        plan_day_id: { type: "integer", example: 101 },
+                        day_number: {
+                          type: "integer",
+                          example: 1,
+                          description: "The order of the day in the plan (1-7).",
+                        },
+                        day_type: {
+                          type: "string",
+                          nullable: true,
+                          example: "Workout A",
+                        },
+                        plan_day_exercises: {
+                          type: "array",
+                          description: "Exercises scheduled for this day.",
+                          items: {
+                            type: "object",
+                            properties: {
+                              plan_day_exercise_id: { type: "integer", example: 501 },
+                              exercise_id: { type: "integer", example: 2 },
+                              sets: { type: "integer", nullable: true, example: 5 },
+                              reps: { type: "integer", nullable: true, example: 5 },
+                              exercises: {
+                                type: "object",
+                                description: "Details of the associated exercise.",
+                                properties: {
+                                  exercise_id: { type: "integer", example: 2 },
+                                  name: { type: "string", example: "Squat" },
+                                  category: { type: "string", example: "Legs" },
+                                  description: { type: "string" },
+                                },
+                                required: ["exercise_id", "name", "category"],
+                              },
+                            },
+                            required: ["exercise_id", "sets", "reps"],
+                          },
+                        },
+                      },
+                      required: ["plan_day_id", "day_number"],
+                    },
+                  },
+                },
+                required: ["plan_id", "name", "description"],
+              },
+            },
+          },
+          400: errorResponse(
+            "Bad Request: Invalid plan_id.",
+            "Invalid plan_id provided."
+          ),
+          404: errorResponse(
+            "Not Found: Workout plan does not exist.",
+            "Workout plan not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch data.",
+            "Failed to fetch workout plans."
+          ),
+        },
+      },
+      post: {
+        tags: ["Exercises"],
+        summary: "Apply a workout plan to a user's schedule",
+        description:
+          "Creates scheduled workout sessions for a user, based on a specified `plan_id`, starting on a given `start_date` and spanning the duration of the plan.",
+        parameters: [
+          {
+            name: "Apply Plan Request",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                user_id: {
+                  type: "integer",
+                  example: 1,
+                  description: "The ID of the user to apply the plan to (required).",
+                },
+                plan_id: {
+                  type: "integer",
+                  example: 1,
+                  description: "The ID of the plan to apply (required).",
+                },
+                start_date: {
+                  type: "string",
+                  format: "date",
+                  example: "2024-06-01",
+                  description: "The date the plan should start (YYYY-MM-DD) (required).",
+                },
+              },
+              required: ["user_id", "plan_id", "start_date"],
+            },
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Plan successfully applied and sessions created.",
+            "Workout plan successfully applied, 3 sessions created starting 2024-06-01."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing required fields.",
+            "user_id, plan_id, and start_date are required."
+          ),
+          404: errorResponse(
+            "Not Found: User or Plan not found.",
+            "User or workout plan not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to create sessions.",
+            "Failed to create workout sessions from plan."
+          ),
+        },
+      },
+    },
   },
 };
 
