@@ -328,6 +328,242 @@ const spec = {
         },
       },
     },
+    "/food-logs": {
+      get: {
+        tags: ["Food Logs"],
+        summary: "Retrieve user's meal logs",
+        description:
+          "Fetches meal logs for a specific user, optionally filtered by meal ID or date.",
+        parameters: [
+          {
+            name: "user_id",
+            in: "query",
+            required: true,
+            type: "integer",
+            description: "The ID of the user whose logs to retrieve.",
+            example: 1,
+          },
+          {
+            name: "meal_id",
+            in: "query",
+            required: false,
+            type: "integer",
+            description: "Optional: Filter for a specific meal ID.",
+            example: 50,
+          },
+          {
+            name: "date",
+            in: "query",
+            required: false,
+            type: "string",
+            format: "date",
+            description:
+              "Optional: Filter logs for a specific date (YYYY-MM-DD).",
+            example: "2024-05-15",
+          },
+        ],
+        responses: {
+          200: {
+            description: "A list of meal logs.",
+            schema: {
+              type: "array",
+              items: {
+                $ref: "#/definitions/UserMeal",
+              },
+            },
+          },
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch meals.",
+            "Failed to fetch meals."
+          ),
+        },
+      },
+      post: {
+        tags: ["Food Logs"],
+        summary: "Log a new meal",
+        description:
+          "Creates a new meal log for a user, including the date, meal type, and associated food items with their amounts.",
+        parameters: [
+          {
+            name: "New Meal Log",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                user_id: {
+                  type: "integer",
+                  example: 1,
+                  description: "ID of the user logging the meal (required).",
+                },
+                meal_type: {
+                  type: "string",
+                  example: "Lunch",
+                  description: "Type of meal (e.g., Breakfast) (required).",
+                },
+                log_date: {
+                  type: "string",
+                  format: "date",
+                  example: "2024-05-15",
+                  description: "Date of the meal (YYYY-MM-DD) (required).",
+                },
+                foods: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      food_id: {
+                        type: "integer",
+                        example: 1,
+                        description: "ID of the food item.",
+                      },
+                      amount_grams: {
+                        type: "number",
+                        example: 150,
+                        description: "Amount consumed in grams.",
+                      },
+                    },
+                    required: ["food_id", "amount_grams"],
+                  },
+                  description:
+                    "List of foods consumed in the meal (required, must not be empty).",
+                },
+              },
+              required: ["user_id", "meal_type", "log_date", "foods"],
+            },
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Food log created successfully.",
+            "Food log created successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing required field or invalid user.",
+            "Missing required fields: user_id, meal_type, log_date, or foods."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to create log.",
+            "Failed to create meal log."
+          ),
+        },
+      },
+      put: {
+        tags: ["Food Logs"],
+        summary: "Update an existing meal log",
+        description:
+          "Updates the meal type, date, and/or replaces the entire list of foods associated with a specific meal ID. Foods array, if present, completely overwrites existing details.",
+        parameters: [
+          {
+            name: "Update Meal Log",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                meal_id: {
+                  type: "integer",
+                  example: 50,
+                  description: "ID of the meal log to update (required).",
+                },
+                meal_type: {
+                  type: "string",
+                  example: "Dinner",
+                  description: "New meal type (optional).",
+                },
+                log_date: {
+                  type: "string",
+                  format: "date",
+                  example: "2024-05-16",
+                  description: "New log date (optional).",
+                },
+                foods: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      food_id: {
+                        type: "integer",
+                        example: 2,
+                        description: "ID of the new food item.",
+                      },
+                      amount_grams: {
+                        type: "number",
+                        example: 200,
+                        description: "Amount consumed in grams.",
+                      },
+                    },
+                  },
+                  description:
+                    "New list of foods (optional; completely replaces old food details if provided).",
+                },
+              },
+              required: ["meal_id"],
+            },
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Food log updated successfully.",
+            "Food log updated successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing meal ID.",
+            "Missing meal_id for update."
+          ),
+          404: errorResponse(
+            "Not Found: Meal does not exist.",
+            "Meal not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to update log.",
+            "Failed to update meal log."
+          ),
+        },
+      },
+      delete: {
+        tags: ["Food Logs"],
+        summary: "Delete a meal log",
+        description:
+          "Deletes a meal log and all its associated food details by meal ID.",
+        parameters: [
+          {
+            name: "Meal ID",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                meal_id: {
+                  type: "integer",
+                  example: 50,
+                  description: "ID of the meal log to delete (required).",
+                },
+              },
+              required: ["meal_id"],
+            },
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Food log deleted successfully.",
+            "Food log deleted successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing meal ID.",
+            "Missing meal_id for delete."
+          ),
+          404: errorResponse(
+            "Not Found: Meal does not exist.",
+            "Meal not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to delete log.",
+            "Failed to delete meal log."
+          ),
+        },
+      },
+    },
   },
 };
 
