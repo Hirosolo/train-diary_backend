@@ -17,7 +17,7 @@ const errorResponse = (description: string, example?: string) => ({
   schema: {
     type: "object",
     properties: {
-      error: { type: "string", example },
+      message: { type: "string", example },
     },
   },
 });
@@ -29,197 +29,239 @@ const spec = {
     version: "1.0.0",
     description: "API documentation for Train Diary application",
   },
-  host: apiHost?.replace(/^https?:\/\//, ""),
+  // --- EDITED SECTION: Conditionally set host or omit it ---
+  // If apiHost is set, remove the scheme. If not set (e.g., in a local dev environment), omit the host
+  // property entirely to use relative paths, which often resolves 'Failed to fetch' in same-origin environments.
+  ...(apiHost ? { host: apiHost.replace(/^https?:\/\//, "") } : {}),
   basePath: "/api",
   schemes: ["https", "http"],
   consumes: ["application/json"],
   produces: ["application/json"],
   tags: [
-    { name: "Authentication", description: "Authentication endpoints" },
-    { name: "Exercises", description: "Exercise management endpoints" },
-    { name: "Foods", description: "Food management endpoints" },
-    { name: "Food Logs", description: "Food log (meal tracking) endpoints" },
-    { name: "Workout Plans", description: "Workout plan management endpoints" },
     {
-      name: "Workout Sessions",
-      description: "Workout session management endpoints",
+      name: "Auth",
+      description: "User authentication and authorization operations",
     },
-    {
-      name: "Summary",
-      description: "User progress and statistics summary endpoints",
-    },
-    { name: "Users", description: "User lookup endpoints" },
   ],
   paths: {
-    // --- AUTHENTICATION ---
     "/auth/login": {
       post: {
-        tags: ["Authentication"],
-        summary: "User login",
-        description: "Authenticate a user with email and password and receive a JWT.",
+        tags: ["Auth"],
+        summary: "Logs in a user and returns a JWT token",
+        description:
+          "Authenticates a user using email and password, issuing a time-limited JSON Web Token (JWT).",
         parameters: [
           {
+            name: "Login Credentials",
             in: "body",
-            name: "body",
             required: true,
             schema: {
               type: "object",
-              required: ["email", "password"],
               properties: {
-                email: { type: "string", example: "user@example.com" },
-                password: { type: "string", example: "password123" },
+                email: {
+                  type: "string",
+                  format: "email",
+                  example: "testuser@example.com",
+                  description: "User's email address.",
+                },
+                password: {
+                  type: "string",
+                  format: "password",
+                  example: "password123",
+                  description: "User's password.",
+                },
               },
+              required: ["email", "password"],
             },
           },
         ],
         responses: {
           200: {
-            description: "Login successful",
+            description: "Successful login and JWT token retrieval",
             schema: {
               type: "object",
               properties: {
                 token: {
                   type: "string",
-                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                  description:
+                    "The authentication JWT. This should be stored securely and used for subsequent requests.",
                 },
                 user: {
                   type: "object",
                   properties: {
-                    user_id: { type: "integer", example: 12 },
-                    username: { type: "string", example: "trainee01" },
-                    email: { type: "string", example: "user@example.com" },
+                    user_id: { type: "string", example: "uuid-12345" },
+                    username: { type: "string", example: "testuser" },
+                    email: {
+                      type: "string",
+                      format: "email",
+                      example: "testuser@example.com",
+                    },
                   },
                 },
               },
             },
           },
-          400: messageResponse("Email or password missing.", "Email and password required."),
-          401: messageResponse("Invalid credentials.", "Wrong password."),
+          400: errorResponse(
+            "Bad Request: Missing email or password.",
+            "Email and password required."
+          ),
+          401: errorResponse(
+            "Unauthorized: Invalid credentials.",
+            "User not found. "
+          ),
+          403: errorResponse(
+            "Unauthorized: Invalid credentials.",
+            "Wrong password."
+          ),
         },
       },
     },
     "/auth/register": {
       post: {
-        tags: ["Authentication"],
-        summary: "User registration",
-        description: "Create a new user account.",
+        tags: ["Auth"],
+        summary: "Registers a new user account",
+        description:
+          "Creates a new user account by accepting a username, email, and password. The password is hashed before storage.",
         parameters: [
           {
+            name: "Registration Data",
             in: "body",
-            name: "body",
             required: true,
             schema: {
               type: "object",
-              required: ["username", "email", "password"],
               properties: {
-                username: { type: "string", example: "jack sparrow" },
-                email: { type: "string", example: "kingofthesea@gmail.com" },
-                password: { type: "string", example: "t123" },
+                username: {
+                  type: "string",
+                  example: "newuser",
+                  description: "Desired username.",
+                },
+                email: {
+                  type: "string",
+                  format: "email",
+                  example: "newuser@example.com",
+                  description: "User's unique email address.",
+                },
+                password: {
+                  type: "string",
+                  format: "password",
+                  example: "securePassword123",
+                  description: "Desired password.",
+                },
               },
+              required: ["username", "email", "password"],
             },
           },
         ],
         responses: {
-          201: messageResponse("Registration successful.", "User registered successfully."),
-          400: messageResponse("Missing username, email, or password.", "All fields are required."),
-          409: messageResponse("Email already registered.", "Email already in use."),
-          500: messageResponse("Failed to register user."),
-        },
-      },
-    },
-
-    // --- USERS ---
-    "/users": {
-      get: {
-        tags: ["Users"],
-        summary: "List users",
-        description: "Retrieve all users stored in the database.",
-        responses: {
-          200: {
-            description: "Users fetched successfully.",
-            schema: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  user_id: { type: "integer", example: 1 },
-                  username: { type: "string", example: "trainee01" },
-                  email: { type: "string", example: "trainee@example.com" },
-                  created_at: {
-                    type: "string",
-                    format: "date-time",
-                    example: "2025-01-01T12:00:00.000Z",
-                  },
-                },
-              },
-            },
-          },
-          500: errorResponse("Unexpected error while fetching users."),
-        },
-      },
-    },
-
-    // --- EXERCISES ---
-    "/exercises": {
-      get: {
-        tags: ["Exercises"],
-        summary: "Get all exercises",
-        description: "Retrieve all exercises from the database.",
-        responses: {
-          200: {
-            description: "Successfully retrieved list of exercises.",
-            schema: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  exercise_id: { type: "integer", example: 1 },
-                  name: { type: "string", example: "Bench Press" },
-                  category: { type: "string", example: "Chest" },
-                  default_sets: { type: "integer", example: 3 },
-                  default_reps: { type: "integer", example: 10 },
-                  description: {
-                    type: "string",
-                    example: "A compound exercise targeting the chest and triceps.",
-                  },
-                },
-              },
-            },
-          },
-          500: {
-            description: "Failed to fetch exercises.",
+          "201": {
+            description: "User registered successfully.",
             schema: {
               type: "object",
               properties: {
-                data: { type: "array" },
-                message: { type: "string", example: "Failed to fetch exercises." },
-                error: { type: "string", example: "Database connection failed." },
+                message: {
+                  type: "string",
+                  example: "User registered successfully.",
+                },
               },
             },
           },
+          "400": {
+            description: "Bad Request: Missing required fields.",
+            schema: {
+              type: "object",
+              properties: {
+                message: {
+                  type: "string",
+                  example: "All fields are required.",
+                },
+              },
+            },
+          },
+          "409": {
+            description: "Conflict: Email already in use.",
+            schema: {
+              type: "object",
+              properties: {
+                message: { type: "string", example: "Email already in use." },
+              },
+            },
+          },
+          "500": {
+            description: "Internal Server Error: Registration failed.",
+            schema: {
+              type: "object",
+              properties: {
+                message: { type: "string", example: "Registration failed." },
+                error: {
+                  type: "string",
+                  description: "Database or server error message.",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/exercises": {
+      get: {
+        tags: ["Exercises"],
+        summary: "Retrieve all available exercises",
+        description: "Fetches a list of all exercises stored in the database.",
+        responses: {
+          200: {
+            description: "A list of exercises.",
+            schema: {
+              type: "array",
+              items: {
+                $ref: "#/definitions/Exercise",
+              },
+            },
+          },
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch data.",
+            "Failed to fetch exercises."
+          ),
         },
       },
       post: {
         tags: ["Exercises"],
         summary: "Add a new exercise",
+        description:
+          "Creates and stores a new exercise definition. Exercise name must be unique.",
         parameters: [
           {
+            name: "New Exercise Object",
             in: "body",
-            name: "body",
             required: true,
             schema: {
               type: "object",
-              required: ["name"],
               properties: {
-                name: { type: "string", example: "Squat" },
-                category: { type: "string", example: "Legs" },
-                default_sets: { type: "integer", example: 4 },
-                default_reps: { type: "integer", example: 12 },
+                name: {
+                  type: "string",
+                  example: "Deadlift",
+                  description: "Name of the exercise (required).",
+                },
+                category: {
+                  type: "string",
+                  example: "Back/Hamstrings",
+                  description: "Muscle group.",
+                },
+                default_sets: {
+                  type: "integer",
+                  example: 5,
+                  description: "Suggested sets.",
+                },
+                default_reps: {
+                  type: "integer",
+                  example: 5,
+                  description: "Suggested reps.",
+                },
                 description: {
                   type: "string",
-                  example: "A compound lower body exercise targeting the quads and glutes.",
+                  description: "Instructions for the exercise.",
                 },
               },
+              required: ["name"],
             },
           },
         ],
@@ -229,904 +271,296 @@ const spec = {
             schema: {
               type: "object",
               properties: {
-                exercise_id: { type: "integer", example: 2 },
+                exercise_id: { type: "string", example: "uuid-new-789" },
                 message: { type: "string", example: "Exercise added." },
               },
             },
           },
-          400: messageResponse("Missing exercise name.", "Exercise name is required."),
-          409: messageResponse(
-            "Exercise with the same name already exists.",
+          400: errorResponse(
+            "Bad Request: Missing required field.",
+            "Exercise name is required."
+          ),
+          409: errorResponse(
+            "Conflict: Exercise name already exists.",
             "Exercise with this name already exists."
           ),
-          500: {
-            description: "Failed to add exercise.",
-            schema: {
-              type: "object",
-              properties: {
-                message: { type: "string", example: "Failed to add exercise." },
-                error: { type: "string", example: "Database connection failed." },
-              },
-            },
-          },
+          500: errorResponse(
+            "Internal Server Error: Failed to add exercise.",
+            "Failed to add exercise."
+          ),
         },
       },
       delete: {
         tags: ["Exercises"],
-        summary: "Delete an exercise",
+        summary: "Delete an exercise by ID",
+        description:
+          "Deletes a single exercise from the database using its unique ID.",
         parameters: [
           {
+            name: "Exercise ID",
             in: "body",
-            name: "exercise_id",
             required: true,
             schema: {
-              type: "integer",
-              example: 1,
-              description: "ID of the exercise to delete.",
+              type: "string",
+              example: "uuid-12345",
+              description:
+                "The unique ID of the exercise to delete (JSON body).",
             },
           },
         ],
         responses: {
-          200: {
-            description: "Exercise successfully deleted.",
-            schema: {
-              type: "object",
-              properties: {
-                message: { type: "string", example: "Exercise deleted." },
-              },
-            },
-          },
-          400: messageResponse("Exercise ID missing or invalid.", "Exercise ID is required."),
-          404: messageResponse("Exercise not found.", "Exercise not found."),
-          500: {
-            description: "Failed to delete exercise.",
-            schema: {
-              type: "object",
-              properties: {
-                message: { type: "string", example: "Failed to delete exercise." },
-                error: { type: "string", example: "Database connection failed." },
-              },
-            },
-          },
-        },
-      },
-    },
-
-    // --- FOODS ---
-    "/foods": {
-      get: {
-        tags: ["Foods"],
-        summary: "Get all foods or one (by query)",
-        description: "Retrieve all foods or a single food by specifying the optional `food_id` query parameter.",
-        parameters: [
-          {
-            name: "food_id",
-            in: "query",
-            required: false,
-            type: "integer",
-            description: "Optional: ID of the food to retrieve",
-          },
-        ],
-        responses: {
-          200: {
-            description: "List of foods or a single food record.",
-            schema: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  food_id: { type: "integer", example: 1 },
-                  name: { type: "string", example: "Oatmeal" },
-                  calories_per_serving: { type: "number", example: 68 },
-                  protein_per_serving: { type: "number", example: 2.4 },
-                  carbs_per_serving: { type: "number", example: 12 },
-                  fat_per_serving: { type: "number", example: 1.4 },
-                  serving_type: { type: "string", example: "100g" },
-                  image: {
-                    type: "string",
-                    example: "https://example.com/images/oatmeal.jpg",
-                  },
-                },
-              },
-            },
-          },
-          404: errorResponse("Food not found.", "Food not found."),
-          500: errorResponse("Failed to fetch foods."),
-        },
-      },
-      post: {
-        tags: ["Foods"],
-        summary: "Add a new food item",
-        parameters: [
-          {
-            in: "body",
-            name: "body",
-            required: true,
-            schema: {
-              type: "object",
-              required: ["name", "serving_type"],
-              properties: {
-                name: { type: "string", example: "Oatmeal" },
-                calories_per_serving: { type: "number", example: 68 },
-                protein_per_serving: { type: "number", example: 2.4 },
-                carbs_per_serving: { type: "number", example: 12 },
-                fat_per_serving: { type: "number", example: 1.4 },
-                serving_type: { type: "string", example: "100g" },
-                image: {
-                  type: "string",
-                  example: "https://example.com/images/oatmeal.jpg",
-                },
-              },
-            },
-          },
-        ],
-        responses: {
-          201: {
-            description: "Food successfully added.",
-            schema: {
-              type: "object",
-              properties: {
-                food_id: { type: "integer", example: 12 },
-                message: {
-                  type: "string",
-                  example: "Food added successfully.",
-                },
-                data: {
-                  type: "object",
-                  properties: {
-                    food_id: { type: "integer" },
-                    name: { type: "string" },
-                    serving_type: { type: "string" },
-                  },
-                },
-              },
-            },
-          },
-          400: errorResponse(
-            "Missing required fields.",
-            "Missing required fields: name or serving_type."
+          200: messageResponse(
+            "Exercise successfully deleted.",
+            "Exercise deleted."
           ),
-          500: errorResponse("Failed to add food."),
-        },
-      },
-      put: {
-        tags: ["Foods"],
-        summary: "Update a food item",
-        parameters: [
-          {
-            in: "body",
-            name: "body",
-            required: true,
-            schema: {
-              type: "object",
-              required: ["food_id"],
-              properties: {
-                food_id: { type: "integer", example: 1 },
-                name: { type: "string", example: "Grilled Chicken Breast" },
-                calories_per_serving: { type: "number", example: 165 },
-              },
-            },
-          },
-        ],
-        responses: {
-          200: {
-            description: "Food updated successfully.",
-            schema: {
-              type: "object",
-              properties: {
-                message: {
-                  type: "string",
-                  example: "Food updated successfully.",
-                },
-                data: { type: "object" },
-              },
-            },
-          },
-          400: errorResponse("Missing food_id.", "Missing food_id for update."),
-          404: errorResponse("Food not found.", "Food not found."),
-          500: errorResponse("Failed to update food."),
-        },
-      },
-      delete: {
-        tags: ["Foods"],
-        summary: "Delete a food item",
-        parameters: [
-          {
-            in: "body",
-            name: "body",
-            required: true,
-            schema: {
-              type: "object",
-              required: ["food_id"],
-              properties: {
-                food_id: { type: "integer", example: 1 },
-              },
-            },
-          },
-        ],
-        responses: {
-          200: messageResponse("Food deleted successfully.", "Food deleted successfully."),
-          400: errorResponse("Missing food_id.", "Missing food_id for delete."),
-          404: errorResponse("Food not found.", "Food not found."),
-          500: errorResponse("Failed to delete food."),
+          400: errorResponse(
+            "Bad Request: Missing ID.",
+            "Exercise ID is required."
+          ),
+          404: errorResponse(
+            "Not Found: Exercise does not exist.",
+            "Exercise not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to delete exercise.",
+            "Failed to delete exercise."
+          ),
         },
       },
     },
-
-    // --- FOOD LOGS ---
     "/food-logs": {
       get: {
         tags: ["Food Logs"],
-        summary: "Get all food logs or one (by query)",
+        summary: "Retrieve user's meal logs",
+        description:
+          "Fetches meal logs for a specific user, optionally filtered by meal ID or date.",
         parameters: [
           {
             name: "user_id",
             in: "query",
-            required: false,
+            required: true,
             type: "integer",
-            description: "Filter logs belonging to a specific user.",
+            description: "The ID of the user whose logs to retrieve.",
+            example: 1,
           },
           {
             name: "meal_id",
             in: "query",
             required: false,
             type: "integer",
-            description: "Optional: meal_id to get a single log.",
+            description: "Optional: Filter for a specific meal ID.",
+            example: 50,
           },
-        ],
-        responses: {
-          200: {
-            description: "List of food logs with their meal details.",
-            schema: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  meal_id: { type: "integer", example: 1 },
-                  user_id: { type: "integer", example: 3 },
-                  meal_type: { type: "string", example: "Lunch" },
-                  log_date: { type: "string", example: "2025-10-23" },
-                  user_meal_details: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        amount_grams: { type: "number", example: 150 },
-                        foods: {
-                          type: "object",
-                          properties: {
-                            name: { type: "string", example: "Rice" },
-                            calories_per_serving: { type: "number", example: 130 },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          500: errorResponse("Failed to fetch food logs."),
-        },
-      },
-      post: {
-        tags: ["Food Logs"],
-        summary: "Add a new food log (meal + foods)",
-        parameters: [
           {
-            in: "body",
-            name: "body",
-            required: true,
-            schema: {
-              type: "object",
-              required: ["user_id", "meal_type", "log_date", "foods"],
-              properties: {
-                user_id: { type: "integer", example: 1 },
-                meal_type: { type: "string", example: "Dinner" },
-                log_date: { type: "string", example: "2025-10-23" },
-                foods: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      food_id: { type: "integer", example: 2 },
-                      amount_grams: { type: "number", example: 100 },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        ],
-        responses: {
-          200: {
-            description: "Food log created successfully.",
-            schema: {
-              type: "object",
-              properties: {
-                message: {
-                  type: "string",
-                  example: "Food log created successfully.",
-                },
-                data: {
-                  type: "object",
-                  properties: {
-                    meal_id: { type: "integer", example: 25 },
-                    user_id: { type: "integer", example: 1 },
-                    meal_type: { type: "string", example: "Dinner" },
-                  },
-                },
-              },
-            },
-          },
-          400: errorResponse(
-            "Missing required fields.",
-            "Missing required fields: user_id, meal_type, log_date, or foods."
-          ),
-          500: errorResponse("Failed to create food log."),
-        },
-      },
-      put: {
-        tags: ["Food Logs"],
-        summary: "Update a food log (meal and foods)",
-        parameters: [
-          {
-            in: "body",
-            name: "body",
-            required: true,
-            schema: {
-              type: "object",
-              required: ["meal_id"],
-              properties: {
-                meal_id: { type: "integer", example: 3 },
-                meal_type: { type: "string", example: "Breakfast" },
-                log_date: { type: "string", example: "2025-10-24" },
-                foods: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      food_id: { type: "integer", example: 5 },
-                      amount_grams: { type: "number", example: 80 },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        ],
-        responses: {
-          200: messageResponse("Food log updated successfully."),
-          400: errorResponse("Missing meal_id.", "Missing meal_id for update."),
-          404: errorResponse("Meal not found.", "Meal not found."),
-          500: errorResponse("Failed to update food log."),
-        },
-      },
-      delete: {
-        tags: ["Food Logs"],
-        summary: "Delete a food log (and its details)",
-        parameters: [
-          {
-            in: "body",
-            name: "body",
-            required: true,
-            schema: {
-              type: "object",
-              required: ["meal_id"],
-              properties: {
-                meal_id: { type: "integer", example: 2 },
-              },
-            },
-          },
-        ],
-        responses: {
-          200: messageResponse("Food log deleted successfully."),
-          400: errorResponse("Missing meal_id.", "Missing meal_id for delete."),
-          404: errorResponse("Meal not found.", "Meal not found."),
-          500: errorResponse("Failed to delete food log."),
-        },
-      },
-    },
-
-    // --- WORKOUT PLANS ---
-    "/workout-plans": {
-      get: {
-        tags: ["Workout Plans"],
-        summary: "Get all workout plans or plan details by ID",
-        description:
-          "Retrieve all workout plans (with duration in days) or detailed information about a specific plan using the `plan_id` query parameter.",
-        parameters: [
-          {
-            name: "plan_id",
+            name: "date",
             in: "query",
             required: false,
-            type: "integer",
-            description: "Optional. ID of the plan to fetch detailed information for.",
-          },
-        ],
-        responses: {
-          200: {
-            description:
-              "Successfully retrieved list or details of plans. When `plan_id` is omitted the response is an array; otherwise it is a single plan object.",
-            schema: {
-              type: "object",
-              properties: {
-                plan_id: { type: "integer", example: 1 },
-                name: { type: "string", example: "Beginner Strength" },
-                description: { type: "string" },
-                duration_days: { type: "integer", example: 4 },
-                plan_days: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      plan_day_id: { type: "integer" },
-                      day_number: { type: "integer" },
-                      day_type: { type: "string" },
-                      plan_day_exercises: {
-                        type: "array",
-                        items: {
-                          type: "object",
-                          properties: {
-                            exercise_id: { type: "integer" },
-                            sets: { type: "integer" },
-                            reps: { type: "integer" },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-              additionalProperties: true,
-            },
-            examples: {
-              "application/json": {
-                list: [
-                  {
-                    plan_id: 1,
-                    name: "Beginner Strength",
-                    description: "Full body routine",
-                    duration_days: 4,
-                  },
-                ],
-                detail: {
-                  plan_id: 2,
-                  name: "Push/Pull/Legs",
-                  description: "Three-day split",
-                  duration_days: 3,
-                  plan_days: [
-                    {
-                      plan_day_id: 10,
-                      day_number: 1,
-                      day_type: "Push",
-                      plan_day_exercises: [
-                        { exercise_id: 4, sets: 4, reps: 8 },
-                        { exercise_id: 7, sets: 3, reps: 12 },
-                      ],
-                    },
-                  ],
-                },
-              },
-            },
-          },
-          404: errorResponse("Plan not found."),
-          500: errorResponse("Failed to fetch plans."),
-        },
-      },
-      post: {
-        tags: ["Workout Plans"],
-        summary: "Apply a workout plan for a user",
-        description:
-          "Assigns a workout plan to a user and automatically generates workout sessions and exercises according to the plan schedule.",
-        parameters: [
-          {
-            in: "body",
-            name: "body",
-            required: true,
-            schema: {
-              type: "object",
-              required: ["user_id", "plan_id", "start_date"],
-              properties: {
-                user_id: { type: "integer", example: 3 },
-                plan_id: { type: "integer", example: 1 },
-                start_date: { type: "string", example: "2025-10-25" },
-              },
-            },
-          },
-        ],
-        responses: {
-          201: messageResponse(
-            "Plan successfully applied. Workout sessions created for user.",
-            "Plan applied successfully. Workout sessions created."
-          ),
-          400: errorResponse(
-            "Missing required fields or invalid input.",
-            "user_id, plan_id, and start_date are required."
-          ),
-          404: errorResponse(
-            "User or plan not found, or plan has no exercises.",
-            "Plan has no exercises."
-          ),
-          500: errorResponse("Server or database error while applying the plan."),
-        },
-      },
-    },
-
-    // --- WORKOUT SESSIONS ---
-    "/workout-sessions": {
-      get: {
-        tags: ["Workout Sessions"],
-        summary: "Get workout sessions or session details",
-        description: "Fetch all workout sessions for a user, or exercise/log details for a specific session.",
-        parameters: [
-          {
-            name: "user_id",
-            in: "query",
-            type: "integer",
-            description: "Filter sessions by user ID.",
-          },
-          {
-            name: "session_id",
-            in: "query",
-            type: "integer",
-            description: "Fetch details of a specific session.",
-          },
-        ],
-        responses: {
-          200: {
-            description:
-              "Successfully fetched sessions or session details. `sessions` is returned when filtering by `user_id`, while `details`/`logs` are returned when filtering by `session_id`.",
-            schema: {
-              type: "object",
-              properties: {
-                sessions: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      session_id: { type: "integer", example: 10 },
-                      user_id: { type: "integer", example: 1 },
-                      scheduled_date: { type: "string", example: "2025-10-24" },
-                      type: { type: "string", example: "Strength" },
-                      notes: { type: "string" },
-                      completed: { type: "boolean" },
-                    },
-                  },
-                },
-                details: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      session_detail_id: { type: "integer" },
-                      exercise_id: { type: "integer" },
-                      planned_sets: { type: "integer" },
-                      planned_reps: { type: "integer" },
-                      exercises: {
-                        type: "object",
-                        properties: {
-                          name: { type: "string" },
-                          category: { type: "string" },
-                          description: { type: "string" },
-                        },
-                      },
-                    },
-                  },
-                },
-                logs: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      log_id: { type: "integer" },
-                      session_detail_id: { type: "integer" },
-                      actual_sets: { type: "integer" },
-                      actual_reps: { type: "integer" },
-                      weight_kg: { type: "number" },
-                      duration_seconds: { type: "number" },
-                      notes: { type: "string" },
-                    },
-                  },
-                },
-              },
-              additionalProperties: true,
-            },
-          },
-          400: errorResponse("Missing query parameter.", "user_id or session_id required."),
-          500: messageResponse("Failed to fetch sessions or details."),
-        },
-      },
-
-      post: {
-        tags: ["Workout Sessions"],
-        summary: "Create session / Add exercises / Log workout",
-        description: "Multi-purpose endpoint that supports three different operations:\n\n**1. Create New Session** - Provide `user_id` and `scheduled_date`\n**2. Add Exercises** - Provide `session_id` and `exercises` array\n**3. Log Workout** - Provide `session_detail_id` and `log` object",
-        parameters: [
-          {
-            in: "body",
-            name: "body",
-            required: true,
-            schema: {
-              type: "object",
-              properties: {
-                user_id: { type: "integer" },
-                scheduled_date: { type: "string" },
-                type: { type: "string" },
-                notes: { type: "string" },
-                session_id: { type: "integer" },
-                exercises: { type: "array" },
-                session_detail_id: { type: "integer" },
-                log: { type: "object" },
-              },
-            },
-            examples: {
-              "Create Session": {
-                value: {
-                  user_id: 1,
-                  scheduled_date: "2025-10-23",
-                  type: "Strength",
-                  notes: "Upper body focus"
-                }
-              },
-              "Add Exercises": {
-                value: {
-                  session_id: 5,
-                  exercises: [
-                    {
-                      exercise_id: 1,
-                      planned_sets: 3,
-                      planned_reps: 12
-                    },
-                    {
-                      exercise_id: 2,
-                      planned_sets: 4,
-                      planned_reps: 10
-                    }
-                  ]
-                }
-              },
-              "Log Workout": {
-                value: {
-                  session_detail_id: 12,
-                  log: {
-                    actual_sets: 3,
-                    actual_reps: 12,
-                    weight_kg: 70.5,
-                    notes: "Felt strong today"
-                  }
-                }
-              }
-            }
-          },
-        ],
-        responses: {
-          201: {
-            description: "Operation successful",
-            schema: {
-              type: "object",
-              properties: {
-                session_id: { type: "integer", example: 15 },
-                message: { type: "string", example: "Session created successfully." },
-              },
-              additionalProperties: true,
-            },
-          },
-          400: errorResponse("Invalid request payload.", "Invalid POST payload."),
-          500: errorResponse("Server error processing request.", "Failed to create session."),
-        },
-      },
-
-      put: {
-        tags: ["Workout Sessions"],
-        summary: "Mark session as completed",
-        parameters: [
-          {
-            in: "body",
-            name: "body",
-            required: true,
-            schema: {
-              type: "object",
-              required: ["session_id"],
-              properties: {
-                session_id: { type: "integer", example: 2 },
-              },
-            },
-          },
-        ],
-        responses: {
-          200: messageResponse("Session marked as completed.", "Session marked as completed successfully."),
-          400: errorResponse(
-            "Session missing or incomplete.",
-            "All exercises must have at least one log before completion."
-          ),
-          500: errorResponse("Failed to mark session as completed."),
-        },
-      },
-
-      delete: {
-        tags: ["Workout Sessions"],
-        summary: "Delete session, exercise, or log",
-        description: "Deletes a workout session (and its details/logs), a single exercise, or a specific log entry.",
-        parameters: [
-          {
-            in: "body",
-            name: "body",
-            required: true,
-            schema: {
-              type: "object",
-              properties: {
-                session_id: { type: "integer", example: 3 },
-                session_detail_id: { type: "integer", example: 9 },
-                log_id: { type: "integer", example: 15 },
-              },
-            },
-          },
-        ],
-        responses: {
-          200: messageResponse("Successfully deleted session, exercise, or log.", "Session deleted successfully."),
-          400: errorResponse("Invalid delete parameters.", "Invalid delete parameters."),
-          500: errorResponse("Failed to delete record.", "Failed to delete session."),
-        },
-      },
-    },
-
-    // --- SUMMARY ---
-    "/summary": {
-      get: {
-        tags: ["Summary"],
-        summary: "Get user's performance summary",
-        description:
-          "Generate and retrieve a user's workout and nutrition summary for a specified period (weekly or monthly), including aggregated metrics and daily breakdown.",
-        parameters: [
-          {
-            name: "user_id",
-            in: "query",
-            required: true,
-            type: "integer",
-            description: "ID of the user to generate the summary for",
-          },
-          {
-            name: "period_type",
-            in: "query",
-            required: true,
-            type: "string",
-            enum: ["weekly", "monthly"],
-            description: "Type of summary period to generate",
-          },
-          {
-            name: "period_start",
-            in: "query",
-            required: true,
             type: "string",
             format: "date",
-            description: "Start date for the summary period (YYYY-MM-DD)",
+            description:
+              "Optional: Filter logs for a specific date (YYYY-MM-DD).",
+            example: "2024-05-15",
           },
         ],
         responses: {
           200: {
-            description: "Successfully generated and retrieved user summary data",
-            schema: {
-              type: "object",
-              properties: {
-                total_workouts: { type: "integer", example: 4 },
-                total_calories_intake: { type: "number", example: 18500 },
-                avg_protein: { type: "number", example: 120 },
-                avg_carbs: { type: "number", example: 200 },
-                avg_fat: { type: "number", example: 60 },
-                total_duration_minutes: { type: "integer", example: 180 },
-                total_gr_score: { type: "number", example: 320 },
-                avg_gr_score: { type: "number", example: 80 },
-                dailyData: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      date: { type: "string", example: "2025-10-20" },
-                      calories: { type: "number", example: 2500 },
-                      protein: { type: "number", example: 120 },
-                      carbs: { type: "number", example: 200 },
-                      fat: { type: "number", example: 70 },
-                      workouts: { type: "integer", example: 1 },
-                      gr_score: { type: "number", example: 82 },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          400: messageResponse(
-            "Missing or invalid query parameters.",
-            "user_id, period_type, and period_start are required."
-          ),
-          404: messageResponse("User not found.", "User not found."),
-          500: {
-            description: "Server error while generating summary data",
-            schema: {
-              type: "object",
-              properties: {
-                message: { type: "string", example: "Failed to get summary." },
-                error: { type: "string", example: "Database error" },
-              },
-            },
-          },
-        },
-      },
-      post: {
-        tags: ["Summary"],
-        summary: "Generate new user summary",
-        description: "Generate a new summary for a user's workout and nutrition data for a specified period.",
-        parameters: [
-          {
-            in: "body",
-            name: "body",
-            required: true,
-            schema: {
-              type: "object",
-              required: ["user_id", "period_type", "period_start"],
-              properties: {
-                user_id: { type: "integer", example: 1 },
-                period_type: { type: "string", enum: ["weekly", "monthly"], example: "weekly" },
-                period_start: { type: "string", format: "date", example: "2025-10-23" },
-              },
-            },
-          },
-        ],
-        responses: {
-          201: {
-            description: "Successfully generated new summary",
-            schema: {
-              $ref: "#/paths/~1summary/get/responses/200/schema",
-            },
-          },
-          400: messageResponse(
-            "Missing or invalid parameters.",
-            "user_id, period_type, and period_start are required."
-          ),
-          404: messageResponse("User not found.", "User not found."),
-          500: {
-            description: "Server error while generating summary.",
-            schema: {
-              type: "object",
-              properties: {
-                message: { type: "string", example: "Failed to generate summary." },
-                error: { type: "string", example: "Database error" },
-              },
-            },
-          },
-        },
-      },
-    },
-
-    // --- PROGRESS ---
-    "/progress": {
-      get: {
-        tags: ["Summary"],
-        summary: "Get all user progress summaries",
-        description: "Retrieve all stored progress summaries ordered by period start date",
-        responses: {
-          200: {
-            description: "Successfully retrieved progress summaries",
+            description: "A list of meal logs.",
             schema: {
               type: "array",
               items: {
-                type: "object",
-                properties: {
-                  user_id: { type: "integer", example: 1 },
-                  period_type: { type: "string", example: "weekly" },
-                  period_start: { type: "string", format: "date", example: "2025-10-20" },
-                  total_workouts: { type: "integer", example: 4 },
-                  total_calories_burned: { type: "number", example: 0 },
-                  avg_duration_minutes: { type: "integer", example: 45 },
-                  total_calories_intake: { type: "number", example: 18500 },
-                  avg_protein: { type: "number", example: 120 },
-                  avg_carbs: { type: "number", example: 200 },
-                  avg_fat: { type: "number", example: 60 },
-                },
+                $ref: "#/definitions/UserMeal",
               },
             },
           },
-          500: errorResponse("Server error while retrieving summaries."),
+          500: errorResponse(
+            "Internal Server Error: Failed to fetch meals.",
+            "Failed to fetch meals."
+          ),
+        },
+      },
+      post: {
+        tags: ["Food Logs"],
+        summary: "Log a new meal",
+        description:
+          "Creates a new meal log for a user, including the date, meal type, and associated food items with their amounts.",
+        parameters: [
+          {
+            name: "New Meal Log",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                user_id: {
+                  type: "integer",
+                  example: 1,
+                  description: "ID of the user logging the meal (required).",
+                },
+                meal_type: {
+                  type: "string",
+                  example: "Lunch",
+                  description: "Type of meal (e.g., Breakfast) (required).",
+                },
+                log_date: {
+                  type: "string",
+                  format: "date",
+                  example: "2024-05-15",
+                  description: "Date of the meal (YYYY-MM-DD) (required).",
+                },
+                foods: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      food_id: {
+                        type: "integer",
+                        example: 1,
+                        description: "ID of the food item.",
+                      },
+                      amount_grams: {
+                        type: "number",
+                        example: 150,
+                        description: "Amount consumed in grams.",
+                      },
+                    },
+                    required: ["food_id", "amount_grams"],
+                  },
+                  description:
+                    "List of foods consumed in the meal (required, must not be empty).",
+                },
+              },
+              required: ["user_id", "meal_type", "log_date", "foods"],
+            },
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Food log created successfully.",
+            "Food log created successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing required field or invalid user.",
+            "Missing required fields: user_id, meal_type, log_date, or foods."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to create log.",
+            "Failed to create meal log."
+          ),
+        },
+      },
+      put: {
+        tags: ["Food Logs"],
+        summary: "Update an existing meal log",
+        description:
+          "Updates the meal type, date, and/or replaces the entire list of foods associated with a specific meal ID. Foods array, if present, completely overwrites existing details.",
+        parameters: [
+          {
+            name: "Update Meal Log",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                meal_id: {
+                  type: "integer",
+                  example: 50,
+                  description: "ID of the meal log to update (required).",
+                },
+                meal_type: {
+                  type: "string",
+                  example: "Dinner",
+                  description: "New meal type (optional).",
+                },
+                log_date: {
+                  type: "string",
+                  format: "date",
+                  example: "2024-05-16",
+                  description: "New log date (optional).",
+                },
+                foods: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      food_id: {
+                        type: "integer",
+                        example: 2,
+                        description: "ID of the new food item.",
+                      },
+                      amount_grams: {
+                        type: "number",
+                        example: 200,
+                        description: "Amount consumed in grams.",
+                      },
+                    },
+                  },
+                  description:
+                    "New list of foods (optional; completely replaces old food details if provided).",
+                },
+              },
+              required: ["meal_id"],
+            },
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Food log updated successfully.",
+            "Food log updated successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing meal ID.",
+            "Missing meal_id for update."
+          ),
+          404: errorResponse(
+            "Not Found: Meal does not exist.",
+            "Meal not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to update log.",
+            "Failed to update meal log."
+          ),
+        },
+      },
+      delete: {
+        tags: ["Food Logs"],
+        summary: "Delete a meal log",
+        description:
+          "Deletes a meal log and all its associated food details by meal ID.",
+        parameters: [
+          {
+            name: "Meal ID",
+            in: "body",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                meal_id: {
+                  type: "integer",
+                  example: 50,
+                  description: "ID of the meal log to delete (required).",
+                },
+              },
+              required: ["meal_id"],
+            },
+          },
+        ],
+        responses: {
+          200: messageResponse(
+            "Food log deleted successfully.",
+            "Food log deleted successfully."
+          ),
+          400: errorResponse(
+            "Bad Request: Missing meal ID.",
+            "Missing meal_id for delete."
+          ),
+          404: errorResponse(
+            "Not Found: Meal does not exist.",
+            "Meal not found."
+          ),
+          500: errorResponse(
+            "Internal Server Error: Failed to delete log.",
+            "Failed to delete meal log."
+          ),
         },
       },
     },
@@ -1167,13 +601,13 @@ export async function GET() {
       </html>
     `;
 
-    return new Response(html, { 
-      headers: { 
+    return new Response(html, {
+      headers: {
         "Content-Type": "text/html",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization"
-      } 
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      },
     });
   } catch (error: unknown) {
     const message =
