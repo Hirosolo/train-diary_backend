@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { supabase } from 'lib/supabaseClient'
 
-const JWT_SECRET = process.env.JWT_SECRET || '123123'
+const JWT_SECRET = process.env.JWT_SECRET || '3984yqwilfgsjeygsdafgjik'
 // test config
 // CORS is handled globally in `src/middleware.ts` (preflight + response headers).
 // No per-route OPTIONS handler is required here to avoid duplication.
